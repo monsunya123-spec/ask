@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>货代内部报价工具 · 正确逻辑</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; background: #e9ecef; margin: 0; padding: 24px; }
+        .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 24px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); overflow-x: auto; }
+        .header { background: #1a3c34; color: white; padding: 20px 32px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+        .logo-img { height: 50px; width: auto; max-width: 150px; object-fit: contain; background: white; border-radius: 8px; padding: 4px 12px; }
+        .title { font-size: 20px; font-weight: 500; }
+        .content { padding: 28px 32px; }
+        .filter-bar { background: #f8f9fa; border-radius: 20px; padding: 20px 24px; margin-bottom: 32px; display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; border: 1px solid #dee2e6; }
+        .field { display: flex; flex-direction: column; gap: 6px; min-width: 130px; }
+        .field label { font-size: 12px; font-weight: 600; color: #2c3e50; letter-spacing: 0.5px; }
+        .field input, .field select { padding: 8px 12px; border: 1px solid #ced4da; border-radius: 12px; font-size: 14px; background: white; }
+        button { background: #1a3c34; color: white; border: none; padding: 8px 24px; border-radius: 32px; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top: 8px; }
+        button:hover { background: #0f2b25; }
+        .quote-table { width: 100%; border-collapse: collapse; font-size: 13px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .quote-table th { background: #eef2f3; padding: 12px 10px; text-align: left; font-weight: 600; border-bottom: 2px solid #cddae2; }
+        .quote-table td { padding: 12px 10px; border-bottom: 1px solid #e2e8f0; }
+        .total-cost { font-weight: 700; color: #1a3c34; }
+        .note { margin-top: 24px; font-size: 12px; color: #6c7a89; background: #f4f9fc; padding: 12px 20px; border-radius: 20px; }
+        .status { color: #d97706; font-size: 13px; margin-top: 16px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <!-- 请将 your-logo.jpg 替换为实际图片文件名，放在同一目录下 -->
+        <img src="ask_logo.jpg" alt="Logo" class="logo-img" onerror="this.style.display='none'">
+        <div class="title">内部报价</div>
+    </div>
+    <div class="content">
+        <div class="filter-bar">
+            <div class="field"><label>📌 FAK/NAC/NOR</label><select id="rateType"><option>FAK</option><option>NAC</option><option>NOR</option></select></div>
+            <div class="field"><label>🚢 CARRIER</label><input id="carrier" value="COSCO"></div>
+            <div class="field"><label>📍 POL</label><input id="pol" placeholder="Shanghai, Yantian..." value="Shanghai"></div>
+            <div class="field"><label>📍 POD</label><input id="pod" placeholder="Auckland, Lyttelton..." value="Auckland"></div>
+            <div class="field"><label>⏱️ T/T (天)</label><input id="tt" value="22"></div>
+            <div class="field"><label>📦 CONTAINER TYPE</label><select id="ctnType"><option>20GP</option><option>40GP</option><option>40HQ</option></select></div>
+            <div><button id="quoteBtn">💰 生成报价</button></div>
+        </div>
+        <div id="resultArea"></div>
+        <div id="statusMsg" class="status"></div>
+        <div class="note">
+            ✅ <strong>计费逻辑（最终正确版）</strong><br/>
+            • <strong>NAC</strong> = 海运费 + BAU (即BUC值 × 柜型倍数) ，FAF = 0<br/>
+            • <strong>FAK / NOR</strong> = 海运费 + FAF (FAF值 × 柜型倍数) ，BAU = 0<br/>
+            • 柜型倍数：20尺 (×1)，40尺 (×2)<br/>
+            • 所有费用按柜型翻倍，TOTAL = OCEAN FREIGHT + BAU (仅NAC) + FAF (仅FAK/NOR)
+        </div>
+    </div>
+</div>
+
+<script>
+    // ======================= 1. 运价数据 (FAK / NOR / NAC) =======================
+    const fakData = {
+        "Auckland": { "Shanghai": [800,1600,1600], "Ningbo": [800,1600,1600], "Shekou": [800,1600,1600], "Yantian": [800,1600,1600], "Hong Kong": [800,1600,1600], "Dalian": [800,1600,1600], "Xingang": [800,1600,1600], "Qingdao": [800,1600,1600], "Xiamen": [800,1600,1600], "Nansha":[800,1600,1600], "Fuzhou":[850,1700,1700], "Mawei":[900,1800,1800], "Lianyungang":[850,1700,1700], "Kaohsiung":[800,1600,1600], "Busan":[600,1200,1200], "Tokyo":[600,1200,1200], "Singapore":[250,500,500], "Port Klang":[300,600,600], "Jakarta":[350,700,700], "Laem Chabang":[350,700,700], "Ho Chi Minh":[350,700,700] },
+        "Lyttelton": { "Shanghai": [800,1600,1600], "Yantian": [800,1600,1600], "Shekou": [800,1600,1600], "Singapore":[250,500,500], "Jakarta":[350,700,700] },
+        "Napier":    { "Shanghai": [800,1600,1600], "Yantian": [800,1600,1600] },
+        "Tauranga":  { "Shanghai": [800,1600,1600], "Yantian": [800,1600,1600] },
+        "Wellington":{ "Shanghai": [800,1600,1600], "Yantian": [1000,1800,1800] }
+    };
+    const norData = {
+        "Auckland": { "Shanghai": [525,1050,1050], "Yantian": [525,1050,1050], "Xingang": [575,1150,1150], "Qingdao": [575,1150,1150], "Ningbo": [525,1050,1050] },
+        "Lyttelton":{ "Shanghai": [525,1050,1050], "Yantian": [525,1050,1050] }
+    };
+    const nacData = {
+        "Yantian":  { "20GP":262, "40GP":524, "40HQ":524 },
+        "Xingang":  { "20GP":312, "40GP":624, "40HQ":624 },
+        "Shekou":   { "20GP":262, "40GP":524, "40HQ":524 },
+        "Shanghai": { "20GP":262, "40GP":524, "40HQ":524 },
+        "Qingdao":  { "20GP":312, "40GP":624, "40HQ":624 },
+        "Ningbo":   { "20GP":262, "40GP":524, "40HQ":524 },
+        "Nansha":   { "20GP":412, "40GP":824, "40HQ":824 }
+    };
+    
+    // ======================= 2. BUC & FAF 数据源 (503/507) =======================
+    const bucFafSource = {
+        months: ["Dec","Jan","Feb","Mar","Apr","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
+        rows: [
+            { tariff: "503/507", type: "BUC", values: [438,417,393,393,438,800,655,0,0,0,0,0,0,0] },
+            { tariff: "503/507", type: "FAF", values: [122,101,77,101,146,507,414,0,0,0,0,0,0,0] }
+        ]
+    };
+    
+    function getCurrentMonth() {
+        const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        return months[new Date().getMonth()];
+    }
+    
+    // 根据类型取 BUC 或 FAF，并按柜型翻倍
+    function getValueByType(type, is40ft) {
+        const targetRow = bucFafSource.rows.find(r => r.tariff === "503/507" && r.type === type);
+        if (!targetRow) return 0;
+        const currentMonth = getCurrentMonth();
+        const colIndex = bucFafSource.months.findIndex(m => m === currentMonth);
+        if (colIndex === -1) return 0;
+        let value = targetRow.values[colIndex] || 0;
+        if (is40ft) value = value * 2;
+        return value;
+    }
+    
+    // 获取 OCEAN FREIGHT
+    function getOceanFreight(rateType, pol, pod, ctnType) {
+        const ctnIdx = ctnType === "20GP" ? 0 : (ctnType === "40GP" ? 1 : 2);
+        if (rateType === "FAK") {
+            const val = fakData[pod]?.[pol]?.[ctnIdx];
+            return val !== undefined ? val : null;
+        } else if (rateType === "NOR") {
+            const val = norData[pod]?.[pol]?.[ctnIdx];
+            return val !== undefined ? val : null;
+        } else if (rateType === "NAC") {
+            const val = nacData[pol]?.[ctnType];
+            return val !== undefined ? val : null;
+        }
+        return null;
+    }
+    
+    const localFees = { doc: 90, dthc: 571, aklLevy: 140 };
+    
+    function generateQuote() {
+        const rateType = document.getElementById('rateType').value;
+        const carrier = document.getElementById('carrier').value.trim() || "COSCO";
+        let pol = document.getElementById('pol').value.trim();
+        let pod = document.getElementById('pod').value.trim();
+        const tt = document.getElementById('tt').value || "22";
+        const ctnType = document.getElementById('ctnType').value;
+        const is40ft = ctnType.includes("40");
+        
+        pol = pol.charAt(0).toUpperCase() + pol.slice(1).toLowerCase();
+        pod = pod.charAt(0).toUpperCase() + pod.slice(1).toLowerCase();
+        
+        let ocean = getOceanFreight(rateType, pol, pod, ctnType);
+        
+        // ========== 核心修正: BAU 和 FAF 的逻辑 ==========
+        let bau = 0;
+        let faf = 0;
+        let validity = "";
+        
+        if (rateType === "NAC") {
+            // NAC：计算 BAU (BUC值 × 柜型倍数)，FAF = 0
+            bau = getValueByType("BUC", is40ft);
+            faf = 0;
+            validity = `NAC 合约价 + BAU (${is40ft ? '40尺x2' : '20尺'}， $${bau})`;
+        } 
+        else if (rateType === "FAK") {
+            // FAK：计算 FAF，BAU = 0
+            bau = 0;
+            faf = getValueByType("FAF", is40ft);
+            validity = `FAK 有效期 15/05～31/05 + FAF (${is40ft ? '40尺x2' : '20尺'}， $${faf})`;
+        } 
+        else if (rateType === "NOR") {
+            // NOR：计算 FAF，BAU = 0
+            bau = 0;
+            faf = getValueByType("FAF", is40ft);
+            validity = `NOR 运价 + FAF (${is40ft ? '40尺x2' : '20尺'}， $${faf})`;
+        }
+        // ==============================================
+        
+        if (ocean === null || ocean === undefined) {
+            document.getElementById('resultArea').innerHTML = `<div style="background:#fee;padding:16px;border-radius:16px;color:#b91c1c;">⚠️ 未找到匹配运价，请检查 POL/POD 组合或柜型。</div>`;
+            return;
+        }
+        
+        const totalUSD = ocean + bau + faf;
+        
+        // 完整的表格HTML，确保每一列都正确分隔
+        const html = `
+            <table class="quote-table">
+                <thead>
+                    <tr>
+                        <th>FAK/NAC</th><th>CARRIER</th><th>POL</th><th>POD</th><th>T/T</th><th>CONTAINER TYPE</th><th>Currency</th><th>OCEAN FREIGHT</th>
+                        <th>Low Sulphur Fuel surcharge (FAF)</th><th>BAU</th><th>Emergency Fuel Surcharge</th><th>CARRIERS SECURITY</th><th>Total COST(USD)</th>
+                        <th>NZD SHIPPING LINE DOC FEE</th><th>DTHC</th><th>AKL PORT LEVY</th><th>VALIDITY</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>${rateType}</td><td>${carrier}</td><td>${pol}</td><td>${pod}</td><td>${tt}</td><td>${ctnType}</td>
+                        <td>USD</td><td>${ocean.toFixed(2)}</td>
+                        <td>${faf.toFixed(2)}</td><td>${bau.toFixed(2)}</td><td>0.00</td><td>0.00</td>
+                        <td class="total-cost"><strong>${totalUSD.toFixed(2)}</strong></td>
+                        <td>${localFees.doc}</td><td>${localFees.dthc}</td><td>${localFees.aklLevy}</td>
+                        <td>${validity}</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div style="margin-top: 16px; background: #eef2fa; padding: 10px 18px; border-radius: 20px; font-size: 12px;">
+                📐 <strong>计费明细</strong><br/>
+                • <strong>${rateType}</strong> : 海运费 ${ocean.toFixed(2)}<br/>
+                • ${rateType === "NAC" ? `➕ BAU (BUC值): ${bau.toFixed(2)}` : `➕ FAF: ${faf.toFixed(2)}`}<br/>
+                • <strong>TOTAL USD = ${totalUSD.toFixed(2)}</strong><br/>
+                • 柜型倍数：20尺 (×1)，40尺 (×2)
+            </div>
+        `;
+        document.getElementById('resultArea').innerHTML = html;
+        document.getElementById('statusMsg').innerHTML = `✅ 报价生成: ${new Date().toLocaleString()} | BAU: ${bau} | FAF: ${faf}`;
+    }
+    
+    document.getElementById('quoteBtn').addEventListener('click', generateQuote);
+    window.addEventListener('load', generateQuote);
+</script>
+</body>
+</html>
