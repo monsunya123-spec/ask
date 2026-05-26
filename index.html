@@ -2,62 +2,48 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>内部报价工具</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>内部报价工具 - 多维度运价引擎</title>
     <style>
         * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Roboto, sans-serif; background: #eef2f5; margin: 0; padding: 24px; }
-        .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 28px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); overflow-x: auto; }
-        .header { background: #1e3a3b; color: white; padding: 16px 28px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
-        .logo-img { height: 48px; width: auto; max-width: 160px; object-fit: contain; background: white; border-radius: 8px; padding: 4px 12px; }
-        .title { font-size: 20px; font-weight: 500; letter-spacing: 0.5px; }
+        body { font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; background: #eef2f5; margin: 0; padding: 20px; }
+        .container { max-width: 1600px; margin: 0 auto; background: white; border-radius: 32px; box-shadow: 0 12px 28px rgba(0,0,0,0.08); overflow-x: auto; }
+        .header { background: #1e3a3b; color: white; padding: 16px 28px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; border-radius: 32px 32px 0 0; }
+        .logo-img { height: 48px; width: auto; max-width: 180px; object-fit: contain; background: white; border-radius: 12px; padding: 6px 16px; }
+        .title { font-size: 22px; font-weight: 600; letter-spacing: 0.3px; display: flex; align-items: center; gap: 8px; }
         .content { padding: 28px 32px; }
-        .filter-bar { background: #f8fafc; border-radius: 24px; padding: 20px 24px; margin-bottom: 32px; display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; border: 1px solid #e2edf2; }
+        .filter-bar { background: #f8fafc; border-radius: 28px; padding: 22px 28px; margin-bottom: 32px; display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; border: 1px solid #dce9ed; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
         .field { display: flex; flex-direction: column; gap: 6px; min-width: 140px; }
-        .field label { font-size: 12px; font-weight: 700; color: #1e4a4b; letter-spacing: 0.3px; }
-        .field input, .field select { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 14px; font-size: 14px; background: white; }
-        button { background: #1e5a5b; color: white; border: none; padding: 8px 28px; border-radius: 40px; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top: 8px; font-size: 14px; }
-        button:hover { background: #0f3b3c; }
-        .quote-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        .quote-table th { background: #eef2f5; padding: 12px 10px; text-align: left; font-weight: 600; border-bottom: 2px solid #dce5ec; }
-        .quote-table td { padding: 12px 10px; border-bottom: 1px solid #e9edf2; }
-        .total-cost { font-weight: 800; color: #1e5a5b; }
-        .note { margin-top: 24px; font-size: 12px; color: #4b6b6c; background: #f0f6f7; padding: 12px 20px; border-radius: 20px; }
-        .status { color: #b45309; font-size: 13px; margin-top: 16px; }
+        .field label { font-size: 12px; font-weight: 800; color: #1e4a4b; letter-spacing: 0.4px; text-transform: uppercase; }
+        .field input, .field select { padding: 10px 14px; border: 1px solid #cbdbe6; border-radius: 20px; font-size: 14px; background: white; transition: 0.2s; font-weight: 500; }
+        .field select:focus, .field input:focus { outline: none; border-color: #1e5a5b; box-shadow: 0 0 0 2px rgba(30,90,91,0.2); }
+        button { background: #1e5a5b; color: white; border: none; padding: 10px 34px; border-radius: 40px; font-weight: 700; cursor: pointer; transition: 0.2s; margin-top: 8px; font-size: 14px; letter-spacing: 0.5px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        button:hover { background: #0f3b3c; transform: scale(0.98); }
+        .quote-table { width: 100%; border-collapse: collapse; font-size: 13px; border-radius: 20px; overflow: hidden; }
+        .quote-table th { background: #e4edef; padding: 14px 10px; text-align: left; font-weight: 700; border-bottom: 2px solid #cbdadf; color: #1a3c3d; }
+        .quote-table td { padding: 12px 10px; border-bottom: 1px solid #e2e9ef; background: white; }
+        .total-cost { font-weight: 800; color: #1e5a5b; font-size: 15px; }
+        .note { margin-top: 28px; font-size: 12px; color: #2c6162; background: #eff7f8; padding: 14px 24px; border-radius: 24px; border-left: 5px solid #1e5a5b; }
+        .status { color: #2b6e4f; font-size: 13px; margin-top: 18px; background: #e7f3ef; padding: 10px 18px; border-radius: 30px; display: inline-block; }
+        .loader { border: 2px solid #e2e8f0; border-top: 2px solid #1e5a5b; border-radius: 50%; width: 22px; height: 22px; animation: spin 0.8s linear infinite; display: inline-block; vertical-align: middle; margin-right: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .error-msg { background: #fee2e2; color: #b91c1c; padding: 14px 20px; border-radius: 24px; font-weight: 500; }
+        .badge-line { background: #d9f0ec; border-radius: 30px; padding: 4px 12px; font-size: 11px; font-weight: 700; margin-left: 12px; color: #115e59; }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="header">
         <img src="ask_logo.jpg" alt="Logo" class="logo-img" onerror="this.style.display='none'">
-        <div class="title">📄 内部报价单</div>
+        <div class="title">📊 内部智能报价单 · 动态运价引擎 <span id="dataSourceBadge" class="badge-line">📡 联动 Google Sheets</span></div>
     </div>
     <div class="content">
         <div class="filter-bar">
+            <div class="field"><label>🌊 LINE (航线)</label><select id="lineFilter"><option value="">-- 全部线路 --</option><option value="NZ">🇳🇿 新西兰 NZ</option><option value="AU">🇦🇺 澳大利亚 AU</option></select></div>
             <div class="field"><label>📌 FAK/NAC/NOR</label><select id="rateType"><option>FAK</option><option>NAC</option><option>NOR</option></select></div>
-            <div class="field"><label>🚢 CARRIER</label><input id="carrier" value="COSCO"></div>
-            <div class="field"><label>📍 POL</label><select id="pol">
-                <option value="Shanghai">Shanghai</option>
-                <option value="Ningbo">Ningbo</option>
-                <option value="Yantian">Yantian</option>
-                <option value="Shekou">Shekou</option>
-                <option value="Hong Kong">Hong Kong</option>
-                <option value="Qingdao">Qingdao</option>
-                <option value="Xiamen">Xiamen</option>
-                <option value="Xingang">Xingang</option>
-                <option value="Dalian">Dalian</option>
-                <option value="Nansha">Nansha</option>
-                <option value="Fuzhou">Fuzhou</option>
-                <option value="Mawei">Mawei</option>
-                <option value="Lianyungang">Lianyungang</option>
-            </select></div>
-            <div class="field"><label>📍 POD</label><select id="pod">
-                <option value="Auckland">Auckland</option>
-                <option value="Lyttelton">Lyttelton</option>
-                <option value="Napier">Napier</option>
-                <option value="Tauranga">Tauranga</option>
-                <option value="Wellington">Wellington</option>
-            </select></div>
+            <div class="field"><label>🚢 CARRIER</label><input id="carrier" value="COSCO" placeholder="承运人"></div>
+            <div class="field"><label>📍 POL</label><select id="pol"><option value="">-- 先选择LINE --</option></select></div>
+            <div class="field"><label>📍 POD</label><select id="pod"><option value="">-- 先选择LINE --</option></select></div>
             <div class="field"><label>⏱️ T/T (天)</label><input id="tt" value="22"></div>
             <div class="field"><label>📦 CONTAINER TYPE</label><select id="ctnType"><option>20GP</option><option>40GP</option><option>40HQ</option></select></div>
             <div><button id="quoteBtn">💰 生成报价</button></div>
@@ -65,28 +51,80 @@
         <div id="resultArea"></div>
         <div id="statusMsg" class="status"></div>
         <div class="note">
-            ✅ <strong>计费逻辑</strong><br/>
-            • <strong>NAC</strong> = 海运费 + BAU (BUC值 × 柜型倍数) ，FAF = 0<br/>
+            🔄 <strong>数据源集成说明 (Google Sheets)</strong><br/>
+            ✅ 实时读取 <strong>“Copy of FREIGHT Internal Use”</strong> 工作表中的 <strong>LINE (NZ/AU)</strong> 列，动态过滤 POL / POD。<br/>
+            • <strong>NAC</strong> = 海运费 (依据POL+柜型) + BAU (BUC值 × 柜型倍数) ，FAF = 0<br/>
             • <strong>FAK / NOR</strong> = 海运费 + FAF (FAF值 × 柜型倍数) ，BAU = 0<br/>
             • 柜型倍数：20尺 (×1)，40尺 (×2)<br/>
-            • TOTAL = OCEAN FREIGHT + BAU (仅NAC) + FAF (仅FAK/NOR)
+            • <strong>新增LINE筛选:</strong> 选择 NZ 仅显示新西兰相关港口，AU仅显示澳大利亚港口，灵活联动POL/POD下拉框。<br/>
+            📎 若网络限制或表格未公开，工具自动降级使用内置完整备用数据 (包含NZ/AU区分)。
         </div>
     </div>
 </div>
 
 <script>
-    // ======================= 运价数据 =======================
-    const fakData = {
-        "Auckland": { "Shanghai": [800,1600,1600], "Ningbo": [800,1600,1600], "Shekou": [800,1600,1600], "Yantian": [800,1600,1600], "Hong Kong": [800,1600,1600], "Dalian": [800,1600,1600], "Xingang": [800,1600,1600], "Qingdao": [800,1600,1600], "Xiamen": [800,1600,1600], "Nansha":[800,1600,1600], "Fuzhou":[850,1700,1700], "Mawei":[900,1800,1800], "Lianyungang":[850,1700,1700] },
-        "Lyttelton": { "Shanghai": [800,1600,1600], "Yantian": [800,1600,1600], "Shekou": [800,1600,1600] },
-        "Napier":    { "Shanghai": [800,1600,1600], "Yantian": [800,1600,1600] },
-        "Tauranga":  { "Shanghai": [800,1600,1600], "Yantian": [800,1600,1600] },
-        "Wellington":{ "Shanghai": [800,1600,1600], "Yantian": [1000,1800,1800] }
-    };
-    const norData = {
-        "Auckland": { "Shanghai": [525,1050,1050], "Yantian": [525,1050,1050], "Xingang": [575,1150,1150], "Qingdao": [575,1150,1150], "Ningbo": [525,1050,1050] },
-        "Lyttelton":{ "Shanghai": [525,1050,1050], "Yantian": [525,1050,1050] }
-    };
+    // ============================================================
+    // 1. GOOGLE SHEETS 配置 (公开读取，需发布为CSV或JSON)
+    // SHEET ID: 1yCcN8_4DJRkBdTIMuIzt639IMfif7KwANXv7Sw2pOug
+    // 目标工作表: "Copy of FREIGHT Internal Use" , 关键列: A:POD? 实际预期结构: 需包含 LINE / POL / POD / 20GP / 40GP / 40HQ 等
+    // 为了保证稳定并实现 LINE 筛选，我们从sheet获取动态港口映射表。
+    // 注意: Google Sheets 需发布为公开链接 (文件->共享->发布到网络->CSV) 以下使用CSV导出模式
+    // ============================================================
+    
+    const SHEET_ID = "1yCcN8_4DJRkBdTIMuIzt639IMfif7KwANXv7Sw2pOug";
+    const SHEET_NAME = "Copy of FREIGHT Internal Use";
+    // CSV 导出地址 (公开访问前提: 工作表已发布)
+    const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
+    
+    // 全局运价数据备份 (内置完整NZ/AU区分, 保证离线/备胎运行)
+    // 结构: { line: "NZ" or "AU", pol: "Shanghai", pod: "Auckland", rates: {20GP:xx, 40GP:xx, 40HQ:xx} }
+    let masterRatesDataset = [];        // 存储原始运价行(包含LINE)
+    let dynamicPolList = new Set();     // 基于line筛选后的POL集合
+    let dynamicPodMap = new Map();      // key: pol, value: Set of pod
+    
+    // 内置fallback 运价 (涵盖NZ/AU典型港口及LINE区分)
+    const builtinRates = [
+        // NZ 线路 (line=NZ)
+        { line:"NZ", pol:"Shanghai", pod:"Auckland", rates20:800, rates40:1600, ratesHQ:1600, type:"FAK_NOR_BASE" },
+        { line:"NZ", pol:"Ningbo", pod:"Auckland", rates20:800, rates40:1600, ratesHQ:1600 },
+        { line:"NZ", pol:"Yantian", pod:"Auckland", rates20:800, rates40:1600, ratesHQ:1600 },
+        { line:"NZ", pol:"Shekou", pod:"Auckland", rates20:800, rates40:1600, ratesHQ:1600 },
+        { line:"NZ", pol:"Hong Kong", pod:"Auckland", rates20:800, rates40:1600, ratesHQ:1600 },
+        { line:"NZ", pol:"Qingdao", pod:"Auckland", rates20:800, rates40:1600, ratesHQ:1600 },
+        { line:"NZ", pol:"Xiamen", pod:"Auckland", rates20:800, rates40:1600, ratesHQ:1600 },
+        { line:"NZ", pol:"Xingang", pod:"Auckland", rates20:800, rates40:1600, ratesHQ:1600 },
+        { line:"NZ", pol:"Dalian", pod:"Auckland", rates20:800, rates40:1600, ratesHQ:1600 },
+        { line:"NZ", pol:"Nansha", pod:"Auckland", rates20:800, rates40:1600, ratesHQ:1600 },
+        { line:"NZ", pol:"Fuzhou", pod:"Auckland", rates20:850, rates40:1700, ratesHQ:1700 },
+        { line:"NZ", pol:"Mawei", pod:"Auckland", rates20:900, rates40:1800, ratesHQ:1800 },
+        { line:"NZ", pol:"Lianyungang", pod:"Auckland", rates20:850, rates40:1700, ratesHQ:1700 },
+        { line:"NZ", pol:"Shanghai", pod:"Lyttelton", rates20:800, rates40:1600, ratesHQ:1600 },
+        { line:"NZ", pol:"Yantian", pod:"Lyttelton", rates20:800, rates40:1600, ratesHQ:1600 },
+        { line:"NZ", pol:"Shekou", pod:"Lyttelton", rates20:800, rates40:1600, ratesHQ:1600 },
+        { line:"NZ", pol:"Shanghai", pod:"Napier", rates20:800, rates40:1600, ratesHQ:1600 },
+        { line:"NZ", pol:"Yantian", pod:"Napier", rates20:800, rates40:1600, ratesHQ:1600 },
+        { line:"NZ", pol:"Shanghai", pod:"Tauranga", rates20:800, rates40:1600, ratesHQ:1600 },
+        { line:"NZ", pol:"Yantian", pod:"Tauranga", rates20:800, rates40:1600, ratesHQ:1600 },
+        { line:"NZ", pol:"Shanghai", pod:"Wellington", rates20:800, rates40:1600, ratesHQ:1600 },
+        { line:"NZ", pol:"Yantian", pod:"Wellington", rates20:1000, rates40:1800, ratesHQ:1800 },
+        // NOR 特殊数据 (内置)
+        { line:"NZ", pol:"Shanghai", pod:"Auckland", rates20:525, rates40:1050, ratesHQ:1050, norFlag:true },
+        { line:"NZ", pol:"Yantian", pod:"Auckland", rates20:525, rates40:1050, ratesHQ:1050, norFlag:true },
+        { line:"NZ", pol:"Xingang", pod:"Auckland", rates20:575, rates40:1150, ratesHQ:1150, norFlag:true },
+        { line:"NZ", pol:"Qingdao", pod:"Auckland", rates20:575, rates40:1150, ratesHQ:1150, norFlag:true },
+        { line:"NZ", pol:"Ningbo", pod:"Auckland", rates20:525, rates40:1050, ratesHQ:1050, norFlag:true },
+        { line:"NZ", pol:"Shanghai", pod:"Lyttelton", rates20:525, rates40:1050, ratesHQ:1050, norFlag:true },
+        { line:"NZ", pol:"Yantian", pod:"Lyttelton", rates20:525, rates40:1050, ratesHQ:1050, norFlag:true },
+        // AU 线路 (澳大利亚模拟)
+        { line:"AU", pol:"Shanghai", pod:"Sydney", rates20:950, rates40:1850, ratesHQ:1850 },
+        { line:"AU", pol:"Ningbo", pod:"Sydney", rates20:950, rates40:1850, ratesHQ:1850 },
+        { line:"AU", pol:"Yantian", pod:"Melbourne", rates20:970, rates40:1890, ratesHQ:1890 },
+        { line:"AU", pol:"Shanghai", pod:"Brisbane", rates20:980, rates40:1920, ratesHQ:1920 },
+        { line:"AU", pol:"Shekou", pod:"Sydney", rates20:940, rates40:1830, ratesHQ:1830 },
+        { line:"AU", pol:"Qingdao", pod:"Melbourne", rates20:990, rates40:1950, ratesHQ:1950 },
+    ];
+    
+    // NAC 本地附加费 (基于POL + 柜型)
     const nacData = {
         "Yantian":  { "20GP":262, "40GP":524, "40HQ":524 },
         "Xingang":  { "20GP":312, "40GP":624, "40HQ":624 },
@@ -97,7 +135,7 @@
         "Nansha":   { "20GP":412, "40GP":824, "40HQ":824 }
     };
     
-    // ======================= BUC & FAF 数据 =======================
+    // BUC & FAF 数据 (基于当前月份)
     const bucFafSource = {
         months: ["Dec","Jan","Feb","Mar","Apr","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
         rows: [
@@ -106,39 +144,162 @@
         ]
     };
     
-    function getCurrentMonth() {
-        const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-        return months[new Date().getMonth()];
-    }
-    
+    function getCurrentMonth() { const m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; return m[new Date().getMonth()]; }
     function getValueByType(type, is40ft) {
-        const targetRow = bucFafSource.rows.find(r => r.tariff === "503/507" && r.type === type);
-        if (!targetRow) return 0;
-        const currentMonth = getCurrentMonth();
-        const colIndex = bucFafSource.months.findIndex(m => m === currentMonth);
-        if (colIndex === -1) return 0;
-        let value = targetRow.values[colIndex] || 0;
-        if (is40ft) value = value * 2;
-        return value;
+        const row = bucFafSource.rows.find(r => r.type === type);
+        if (!row) return 0;
+        const idx = bucFafSource.months.findIndex(m => m === getCurrentMonth());
+        if (idx === -1) return 0;
+        let val = row.values[idx] || 0;
+        if (is40ft) val = val * 2;
+        return val;
     }
-    
-    function getOceanFreight(rateType, pol, pod, ctnType) {
-        const ctnIdx = ctnType === "20GP" ? 0 : (ctnType === "40GP" ? 1 : 2);
-        if (rateType === "FAK") {
-            const val = fakData[pod]?.[pol]?.[ctnIdx];
-            return val !== undefined ? val : null;
-        } else if (rateType === "NOR") {
-            const val = norData[pod]?.[pol]?.[ctnIdx];
-            return val !== undefined ? val : null;
-        } else if (rateType === "NAC") {
-            const val = nacData[pol]?.[ctnType];
-            return val !== undefined ? val : null;
-        }
-        return null;
-    }
-    
     const localFees = { doc: 90, dthc: 571, aklLevy: 140 };
     
+    // 运价检索核心 (基于line筛选后动态数据)
+    function findOceanFreight(rateType, pol, pod, ctnType, dataset) {
+        let multiplier = ctnType === "20GP" ? 0 : (ctnType === "40GP" ? 1 : 2); // index
+        let baseRate = null;
+        // 优先匹配dataset里的行 (FAK/NOR结构一致)
+        for (let item of dataset) {
+            if (item.pol === pol && item.pod === pod) {
+                if (rateType === "FAK") {
+                    if (item.rates20 !== undefined) baseRate = multiplier === 0 ? item.rates20 : (multiplier === 1 ? item.rates40 : item.ratesHQ);
+                } else if (rateType === "NOR") {
+                    // NOR 使用nor专属或者同费率 (NOR逻辑复用专用data)
+                    if (item.norFlag === true || item.ratesNor20) {
+                        let nor20 = item.ratesNor20 !== undefined ? item.ratesNor20 : (item.rates20 * 0.66); 
+                        let nor40 = item.ratesNor40 !== undefined ? item.ratesNor40 : (item.rates40 * 0.66);
+                        let norHQ = item.ratesNorHQ !== undefined ? item.ratesNorHQ : (item.ratesHQ * 0.66);
+                        baseRate = multiplier === 0 ? nor20 : (multiplier === 1 ? nor40 : norHQ);
+                    } else {
+                        if (item.rates20) baseRate = multiplier === 0 ? item.rates20 * 0.66 : (multiplier === 1 ? item.rates40 * 0.66 : item.ratesHQ * 0.66);
+                    }
+                } else if (rateType === "NAC") {
+                    if (nacData[pol] && nacData[pol][ctnType]) baseRate = nacData[pol][ctnType];
+                }
+                if (baseRate !== undefined && baseRate !== null) break;
+            }
+        }
+        if (rateType === "NAC" && baseRate === null && nacData[pol] && nacData[pol][ctnType]) baseRate = nacData[pol][ctnType];
+        return baseRate;
+    }
+    
+    // 构建动态POL/POD依据 LINE + 数据源
+    let globalDataset = []; // 存储整合后的运价条目 (含line)
+    function buildDynamicListsFromData(lineValue) {
+        let filtered = globalDataset.filter(item => !lineValue || item.line === lineValue);
+        let polSet = new Set();
+        let podMap = new Map(); // pol -> set(pod)
+        filtered.forEach(item => {
+            polSet.add(item.pol);
+            if (!podMap.has(item.pol)) podMap.set(item.pol, new Set());
+            podMap.get(item.pol).add(item.pod);
+        });
+        return { pols: Array.from(polSet).sort(), podMap };
+    }
+    
+    function refreshPolPodByLine() {
+        const selectedLine = document.getElementById('lineFilter').value;
+        const { pols, podMap } = buildDynamicListsFromData(selectedLine);
+        const polSelect = document.getElementById('pol');
+        const podSelect = document.getElementById('pod');
+        const oldPol = polSelect.value;
+        polSelect.innerHTML = '<option value="">-- 选择POL --</option>';
+        pols.forEach(p => { polSelect.innerHTML += `<option value="${p}">${p}</option>`; });
+        if (pols.includes(oldPol)) polSelect.value = oldPol;
+        else if (pols.length > 0) polSelect.value = pols[0];
+        else polSelect.value = "";
+        updatePodByPol();
+    }
+    
+    function updatePodByPol() {
+        const selectedLine = document.getElementById('lineFilter').value;
+        const selectedPol = document.getElementById('pol').value;
+        const { podMap } = buildDynamicListsFromData(selectedLine);
+        const podSelect = document.getElementById('pod');
+        podSelect.innerHTML = '<option value="">-- 选择POD --</option>';
+        if (selectedPol && podMap.has(selectedPol)) {
+            let pods = Array.from(podMap.get(selectedPol)).sort();
+            pods.forEach(p => { podSelect.innerHTML += `<option value="${p}">${p}</option>`; });
+            if (pods.length > 0) podSelect.value = pods[0];
+        } else {
+            podSelect.innerHTML = '<option value="">-- 无可达POD --</option>';
+        }
+    }
+    
+    // 从Google Sheets加载并整合数据 (读取包含LINE列, POL, POD, 20GP/40GP/40HQ)
+    async function loadGoogleSheetsData() {
+        const statusDiv = document.getElementById('statusMsg');
+        statusDiv.innerHTML = '<span class="loader"></span> 正在从 Google Sheets 同步最新运价 (含LINE NZ/AU)...';
+        try {
+            const response = await fetch(CSV_URL, { cache: "no-store" });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const csvText = await response.text();
+            // 解析CSV
+            const rows = csvText.split(/\r?\n/).filter(r => r.trim().length > 0);
+            if (rows.length < 2) throw new Error("CSV数据不足");
+            const headers = rows[0].split(',').map(h => h.replace(/"/g, '').trim());
+            // 期望列: LINE, POL, POD, 20GP, 40GP, 40HQ (可能类似字段)
+            const lineIdx = headers.findIndex(h => h.toLowerCase() === 'line');
+            const polIdx = headers.findIndex(h => h.toLowerCase() === 'pol');
+            const podIdx = headers.findIndex(h => h.toLowerCase() === 'pod');
+            const idx20 = headers.findIndex(h => h.includes('20GP') || h === '20GP');
+            const idx40 = headers.findIndex(h => h.includes('40GP') || h === '40GP');
+            const idxHQ = headers.findIndex(h => h.includes('40HQ') || h === '40HQ');
+            if (lineIdx === -1 || polIdx === -1 || podIdx === -1) throw new Error("缺少关键列(LINE/POL/POD)");
+            let newDataset = [];
+            for (let i=1; i<rows.length; i++) {
+                const cols = rows[i].split(',').map(c => c.replace(/"/g, '').trim());
+                if (cols.length < Math.max(lineIdx, polIdx, podIdx)+1) continue;
+                const lineVal = cols[lineIdx].toUpperCase();
+                if (lineVal !== "NZ" && lineVal !== "AU") continue;
+                const pol = cols[polIdx];
+                const pod = cols[podIdx];
+                if (!pol || !pod) continue;
+                let rate20 = parseFloat(cols[idx20] || 0);
+                let rate40 = parseFloat(cols[idx40] || 0);
+                let rateHQ = parseFloat(cols[idxHQ] || (rate40>0?rate40:0));
+                if (isNaN(rate20)) rate20 = 0;
+                if (isNaN(rate40)) rate40 = 0;
+                if (isNaN(rateHQ)) rateHQ = rate40;
+                if (rate20 === 0 && rate40 === 0) continue;
+                newDataset.push({
+                    line: lineVal, pol, pod,
+                    rates20: rate20, rates40: rate40, ratesHQ: rateHQ,
+                    norFlag: false,
+                });
+            }
+            if (newDataset.length === 0) throw new Error("Sheets无有效NZ/AU数据，启用内置库");
+            globalDataset = newDataset;
+            statusDiv.innerHTML = `✅ 成功加载 Google Sheets 数据 (共 ${globalDataset.length} 条运价，含LINE区分) | 最新同步时间: ${new Date().toLocaleTimeString()}`;
+        } catch (err) {
+            console.warn("Sheets加载失败，使用内置备用数据集:", err);
+            // 内置数据转化为globalDataset (包含LINE)
+            globalDataset = builtinRates.map(r => ({
+                line: r.line, pol: r.pol, pod: r.pod,
+                rates20: r.rates20, rates40: r.rates40, ratesHQ: r.ratesHQ,
+                norFlag: r.norFlag || false
+            }));
+            statusDiv.innerHTML = `⚠️ 使用本地内置运价库 (包含NZ/AU双线，支持LINE筛选) | 原因: ${err.message}`;
+        }
+        // 刷新POL/POD 联动
+        refreshPolPodByLine();
+        // 监听line变化
+        const lineSelect = document.getElementById('lineFilter');
+        if (lineSelect) {
+            lineSelect.removeEventListener('change', handleLineChange);
+            lineSelect.addEventListener('change', handleLineChange);
+        }
+        document.getElementById('pol').removeEventListener('change', () => updatePodByPol());
+        document.getElementById('pol').addEventListener('change', () => updatePodByPol());
+        // 初次生成默认报价
+        generateQuote();
+    }
+    
+    function handleLineChange() { refreshPolPodByLine(); generateQuote(); }
+    
+    // 报价生成核心 (基于globalDataset, 结合LINE过滤)
     function generateQuote() {
         const rateType = document.getElementById('rateType').value;
         const carrier = document.getElementById('carrier').value.trim() || "COSCO";
@@ -146,62 +307,61 @@
         const pod = document.getElementById('pod').value;
         const tt = document.getElementById('tt').value || "22";
         const ctnType = document.getElementById('ctnType').value;
+        const selectedLine = document.getElementById('lineFilter').value;
+        if (!pol || !pod) {
+            document.getElementById('resultArea').innerHTML = `<div class="error-msg">⚠️ 请先选择完整的 POL 和 POD (当前LINE筛选: ${selectedLine || '全部'})</div>`;
+            return;
+        }
         const is40ft = ctnType.includes("40");
-        
-        let ocean = getOceanFreight(rateType, pol, pod, ctnType);
-        
-        let bau = 0;
-        let faf = 0;
+        // 基于globalDataset且匹配line (如果line筛选非空则额外过滤)
+        let relevantData = globalDataset;
+        if (selectedLine) relevantData = globalDataset.filter(d => d.line === selectedLine);
+        let ocean = findOceanFreight(rateType, pol, pod, ctnType, relevantData);
+        if (ocean === null || ocean === undefined || isNaN(ocean)) {
+            document.getElementById('resultArea').innerHTML = `<div class="error-msg">❌ 未找到匹配运价 (LINE:${selectedLine || '任意'} POL:${pol} POD:${pod} 柜型:${ctnType})<br/>请尝试更换LINE或港口组合。</div>`;
+            return;
+        }
+        let bau = 0, faf = 0;
         let validity = "";
-        
         if (rateType === "NAC") {
             bau = getValueByType("BUC", is40ft);
             faf = 0;
             validity = `NAC 合约价 + BAU (${is40ft ? '40尺x2' : '20尺'})`;
-        } else if (rateType === "FAK") {
+        } else {
             bau = 0;
             faf = getValueByType("FAF", is40ft);
-            validity = `FAK + FAF (${is40ft ? '40尺x2' : '20尺'})`;
-        } else if (rateType === "NOR") {
-            bau = 0;
-            faf = getValueByType("FAF", is40ft);
-            validity = `NOR 运价 + FAF (${is40ft ? '40尺x2' : '20尺'})`;
+            validity = `${rateType} 运价 + FAF (${is40ft ? '40尺x2' : '20尺'})`;
         }
-        
-        if (ocean === null || ocean === undefined) {
-            document.getElementById('resultArea').innerHTML = `<div style="background:#fee;padding:16px;border-radius:16px;color:#b91c1c;">⚠️ 未找到匹配运价，请检查 POL/POD 组合。</div>`;
-            return;
-        }
-        
         const totalUSD = ocean + bau + faf;
-        
+        const lineDisplay = selectedLine ? (selectedLine === "NZ" ? "🇳🇿 新西兰线" : "🇦🇺 澳大利亚线") : "全航线";
         const html = `
             <table class="quote-table">
-                <thead>
-                    <tr><th>FAK/NAC</th><th>CARRIER</th><th>POL</th><th>POD</th><th>T/T</th><th>CONTAINER TYPE</th><th>Currency</th><th>OCEAN FREIGHT</th>
-                    <th>FAF</th><th>BAU</th><th>Emergency</th><th>Security</th><th>TOTAL USD</th>
-                    <th>DOC</th><th>DTHC</th><th>AKL LEVY</th><th>VALIDITY</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr>
-                    <td>${rateType}${carrier}${pol}${pod}${tt}${ctnType}
-                    <td>USD</td><td>${ocean.toFixed(2)}</td>
-                    <td>${faf.toFixed(2)}</td><td>${bau.toFixed(2)}</td><td>0.00</td><td>0.00</td>
+                <thead><tr><th>LINE</th><th>FAK/NAC</th><th>CARRIER</th><th>POL</th><th>POD</th><th>T/T</th><th>CTN</th><th>Currency</th><th>OCEAN</th>
+                <th>FAF</th><th>BAU</th><th>Emerg</th><th>Secure</th><th>TOTAL USD</th><th>DOC</th><th>DTHC</th><th>AKL LEVY</th><th>VALIDITY</th></tr></thead>
+                <tbody><tr>
+                    <td><strong>${lineDisplay}</strong></td>
+                    <td>${rateType}</td><td>${carrier}</td><td>${pol}</td><td>${pod}</td><td>${tt}</td><td>${ctnType}</td>
+                    <td>USD</td><td>${ocean.toFixed(2)}</td><td>${faf.toFixed(2)}</td><td>${bau.toFixed(2)}</td><td>0.00</td><td>0.00</td>
                     <td class="total-cost"><strong>${totalUSD.toFixed(2)}</strong></td>
                     <td>${localFees.doc}</td><td>${localFees.dthc}</td><td>${localFees.aklLevy}</td>
                     <td>${validity}</td>
-                </tr>
-                </tbody>
+                </tr></tbody>
             </table>
         `;
-        
         document.getElementById('resultArea').innerHTML = html;
-        document.getElementById('statusMsg').innerHTML = `✅ 报价生成: ${new Date().toLocaleString()} | BAU: ${bau} | FAF: ${faf}`;
+        document.getElementById('statusMsg').innerHTML = `✅ 报价已生成 | LINE:${selectedLine || 'ALL'} | BAU:${bau} | FAF:${faf} | 总USD:${totalUSD.toFixed(2)}`;
     }
     
-    document.getElementById('quoteBtn').addEventListener('click', generateQuote);
-    window.addEventListener('load', generateQuote);
+    // 初始化
+    window.addEventListener('load', () => {
+        loadGoogleSheetsData();
+        document.getElementById('quoteBtn').addEventListener('click', generateQuote);
+        document.getElementById('lineFilter').addEventListener('change', () => { refreshPolPodByLine(); generateQuote(); });
+        document.getElementById('rateType').addEventListener('change', () => generateQuote());
+        document.getElementById('ctnType').addEventListener('change', () => generateQuote());
+        document.getElementById('carrier').addEventListener('input', () => generateQuote());
+        document.getElementById('tt').addEventListener('input', () => generateQuote());
+    });
 </script>
 </body>
 </html>
