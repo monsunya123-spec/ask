@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>内部报价工具 - 多代理版</title>
+    <title>内部报价工具 - 修正NAC匹配版</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; background: #eef2f5; margin: 0; padding: 20px; }
@@ -44,8 +44,8 @@
     <div class="header">
         <img src="ask_logo.jpg" alt="Logo" class="logo-img" onerror="this.style.display='none'">
         <div class="title">
-            📊 内部报价工具 · 多代理版
-            <span id="dataBadge" class="badge">⚙️ 支持多代理</span>
+            📊 内部报价工具 · 修正NAC匹配版
+            <span id="dataBadge" class="badge">⚙️ 支持Rate20/40/40H</span>
         </div>
     </div>
     <div class="content">
@@ -64,7 +64,6 @@
                 <option value="allorigins">allorigins.win (推荐)</option>
                 <option value="corsproxy">corsproxy.io</option>
                 <option value="thingproxy">thingproxy (备用)</option>
-                <option value="direct">直接访问(仅限已配置CORS)</option>
             </select>
             <button id="changeProxyBtn" style="padding: 4px 16px; margin-top: 0;">切换并重试</button>
         </div>
@@ -75,12 +74,12 @@
         <div id="debugInfo" class="data-info">📋 等待数据加载...</div>
         
         <div class="note">
-            🔄 <strong>数据源读取方式</strong><br/>
-            ✅ 按列位置读取：<strong>D列 = POL</strong>，<strong>E列 = POD</strong>，<strong>F列 = Total COST(USD)</strong><br/>
-            ✅ <strong>OCEAN FREIGHT</strong> = 从您的 Google Sheets 读取 F列 数值<br/>
-            ✅ <strong>FAK / NOR</strong> = OCEAN FREIGHT + Low Sulphur Fuel surcharge (FAF)<br/>
-            ✅ <strong>NAC</strong> = OCEAN FREIGHT + BAU<br/>
-            📌 如果读取失败，请在上方切换不同的代理服务器后点击"切换并重试"
+            🔄 <strong>修正说明</strong><br/>
+            ✅ <strong>NAC模式匹配规则</strong>：<br/>
+            &nbsp;&nbsp;• 当POD选择 <code>Auckland;Tauranga;Lyttelton;Wellington</code> 时，会自动匹配表格中的 Auckland / Tauranga / Lyttelton / Wellington<br/>
+            &nbsp;&nbsp;• 当POD选择 <code>Sydney, New South Wales, Australia;Melbourne, Victoria, Australia;Brisbane, Queensland, Australia</code> 时，自动匹配 Sydney / Melbourne / Brisbane<br/>
+            ✅ <strong>柜型映射</strong>：Rate 20 → 20GP，Rate 40 → 40GP，Rate 40H → 40HQ<br/>
+            ✅ 按列位置读取：<strong>D列 = POL</strong>，<strong>E列 = POD</strong>，<strong>F列 = Total COST(USD)</strong>
         </div>
         <div style="margin-top: 16px; text-align: right;">
             <button id="refreshDataBtn" class="refresh-btn">🔄 手动刷新数据</button>
@@ -90,7 +89,7 @@
 
 <script>
     // ============================================================
-    // 您最新的 Google Sheets CSV 发布链接
+    // 您的 Google Sheets CSV 发布链接
     // ============================================================
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_rkgXWvqJu9uRWkyHXLMoGXe1Y1A2pbNvpZ52xU9xr0UE7GsDNSvKXvck8Zk-CRvt7Ys1nClO96tI/pub?output=csv";
     
@@ -98,14 +97,30 @@
     const PROXY_CONFIG = {
         allorigins: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
         corsproxy: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-        thingproxy: (url) => `https://thingproxy.freeboard.io/fetch/${encodeURIComponent(url)}`,
-        direct: (url) => url
+        thingproxy: (url) => `https://thingproxy.freeboard.io/fetch/${encodeURIComponent(url)}`
     };
     
     // POD 规则定义
     const STANDARD_PODS_NZ_FAK_NOR = ["Auckland", "Lyttelton", "Napier", "Tauranga", "Wellington"];
+    
+    // NAC 长字符串及其对应的实际港口名（用于匹配）
+    const NAC_PODS_CONFIG = {
+        "Auckland;Tauranga;Lyttelton;Wellington": ["Auckland", "Tauranga", "Lyttelton", "Wellington"],
+        "Sydney, New South Wales, Australia;Melbourne, Victoria, Australia;Brisbane, Queensland, Australia": ["Sydney", "Melbourne", "Brisbane"]
+    };
     const NAC_PODS_NZ = "Auckland;Tauranga;Lyttelton;Wellington";
     const NAC_PODS_AU = "Sydney, New South Wales, Australia;Melbourne, Victoria, Australia;Brisbane, Queensland, Australia";
+    
+    // 柜型映射: 表格中的值 -> 标准值
+    const CONTAINER_TYPE_MAP = {
+        "20": "20GP",
+        "20GP": "20GP",
+        "40": "40GP", 
+        "40GP": "40GP",
+        "40H": "40HQ",
+        "40HQ": "40HQ",
+        "40HC": "40HQ"
+    };
     
     // 全局运价数据集
     let freightData = [];
@@ -155,11 +170,7 @@
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeout);
         try {
-            const response = await fetch(url, { 
-                cache: "no-store",
-                signal: controller.signal,
-                mode: "cors"
-            });
+            const response = await fetch(url, { cache: "no-store", signal: controller.signal, mode: "cors" });
             clearTimeout(timeoutId);
             return response;
         } catch (err) {
@@ -179,19 +190,14 @@
         
         try {
             const proxyUrl = PROXY_CONFIG[currentProxy](CSV_URL);
-            console.log("请求URL:", proxyUrl);
-            
             const response = await fetchWithTimeout(proxyUrl, 20000);
             
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             
             const csvText = await response.text();
             const lines = csvText.split(/\r?\n/).filter(l => l.trim().length > 0);
             if (lines.length < 2) throw new Error("CSV数据为空");
             
-            // 读取表头
             const headers = parseCSVLine(lines[0]);
             console.log("检测到表头:", headers);
             
@@ -199,14 +205,15 @@
             const POL_COL_IDX = 3;
             const POD_COL_IDX = 4;
             const TOTAL_COST_COL_IDX = 5;
+            const RATE_COL_IDX = 2; // 假设C列是Rate (20/40/40H)
             
             let newData = [];
             let polSet = new Set();
+            let podSet = new Set();
             let skippedCount = 0;
             
             for (let i = 1; i < lines.length; i++) {
                 const cols = parseCSVLine(lines[i]);
-                
                 if (cols.length <= TOTAL_COST_COL_IDX) {
                     skippedCount++;
                     continue;
@@ -221,12 +228,19 @@
                     continue;
                 }
                 
+                // 柜型识别：优先从Rate列读取，支持 "20"/"20GP"/"40"/"40GP"/"40H"/"40HQ"
                 let containerType = "20GP";
-                if (cols.length > 2 && cols[2]) {
-                    let ct = cols[2].toUpperCase();
-                    if (ct.includes("40HQ")) containerType = "40HQ";
-                    else if (ct.includes("40GP") || ct.includes("40HC")) containerType = "40GP";
-                    else if (ct.includes("20")) containerType = "20GP";
+                if (cols.length > RATE_COL_IDX && cols[RATE_COL_IDX]) {
+                    let rateVal = cols[RATE_COL_IDX].trim().toUpperCase();
+                    if (CONTAINER_TYPE_MAP[rateVal]) {
+                        containerType = CONTAINER_TYPE_MAP[rateVal];
+                    } else if (rateVal.includes("40HQ") || rateVal === "40H") {
+                        containerType = "40HQ";
+                    } else if (rateVal.includes("40") || rateVal === "40GP") {
+                        containerType = "40GP";
+                    } else if (rateVal.includes("20")) {
+                        containerType = "20GP";
+                    }
                 }
                 
                 newData.push({ 
@@ -236,17 +250,18 @@
                     oceanFreight: totalCostVal 
                 });
                 polSet.add(polVal);
+                podSet.add(podVal);
             }
             
             if (newData.length === 0) {
-                throw new Error(`未读取到有效数据。共检查 ${lines.length-1} 行，跳过 ${skippedCount} 行。请确保 D列=POL, E列=POD, F列有数字。`);
+                throw new Error(`未读取到有效数据。共检查 ${lines.length-1} 行，跳过 ${skippedCount} 行。`);
             }
             
             freightData = newData;
             lastLoadTime = new Date();
             
-            debugDiv.innerHTML = `✅ 代理 ${currentProxy} 读取成功！<br>📊 共 ${freightData.length} 条运价<br>📍 发现 ${polSet.size} 个POL<br>📅 更新时间: ${lastLoadTime.toLocaleString()}<br>📋 表头预览: ${headers.slice(0, 8).join(' | ')}`;
-            statusDiv.innerHTML = `✅ 成功加载！共 ${freightData.length} 条运价 | 代理: ${currentProxy} | 更新时间: ${lastLoadTime.toLocaleString()}`;
+            debugDiv.innerHTML = `✅ 代理 ${currentProxy} 读取成功！<br>📊 共 ${freightData.length} 条运价<br>📍 发现 ${polSet.size} 个POL<br>🎯 发现 ${podSet.size} 个POD<br>📅 更新时间: ${lastLoadTime.toLocaleString()}`;
+            statusDiv.innerHTML = `✅ 成功加载！共 ${freightData.length} 条运价 | 代理: ${currentProxy}`;
             statusDiv.className = "status status-success";
             badge.innerHTML = `✅ ${freightData.length} 条`;
             
@@ -255,9 +270,9 @@
             
         } catch (err) {
             console.error("加载失败:", err);
-            statusDiv.innerHTML = `⚠️ 代理 ${currentProxy} 读取失败: ${err.message}<br><br>请尝试：<br>1. 在上方切换到其他代理服务器<br>2. 检查网络连接<br>3. 确认表格已发布为公开网页`;
+            statusDiv.innerHTML = `⚠️ 代理 ${currentProxy} 读取失败: ${err.message}<br><br>请尝试切换到其他代理服务器`;
             statusDiv.className = "status status-error";
-            debugDiv.innerHTML = `错误: ${err.message}<br>代理: ${currentProxy}<br>数据链接: ${CSV_URL.substring(0, 80)}...<br><br>💡 提示: 请尝试切换到 "corsproxy" 或 "thingproxy" 代理`;
+            debugDiv.innerHTML = `错误: ${err.message}<br>代理: ${currentProxy}<br>请切换到 corsproxy 或 thingproxy 重试`;
             badge.innerHTML = "⚠️ 读取失败";
             freightData = [];
         }
@@ -291,25 +306,44 @@
         });
     }
     
+    // 核心匹配函数：根据RATE TYPE和选择的POD，找到对应的OCEAN FREIGHT
     function findOceanFreight(rateType, pol, selectedPod, ctnType) {
         if (rateType === "NAC") {
-            const match = freightData.find(item => 
-                item.pol === pol && 
-                item.podRaw === selectedPod && 
-                item.containerType === ctnType
-            );
-            if (match) return match.oceanFreight;
+            // NAC模式：selectedPod 是长字符串，需要拆分成多个实际港口名进行匹配
+            const targetPorts = NAC_PODS_CONFIG[selectedPod] || [];
             
-            if (ctnType === "40HQ" || ctnType === "40GP") {
-                const altMatch = freightData.find(item => 
+            for (let targetPort of targetPorts) {
+                // 精确匹配
+                let match = freightData.find(item => 
                     item.pol === pol && 
-                    item.podRaw === selectedPod && 
-                    (item.containerType === "40GP" || item.containerType === "40HQ")
+                    item.podRaw === targetPort && 
+                    item.containerType === ctnType
                 );
-                if (altMatch) return altMatch.oceanFreight;
+                if (match) return match.oceanFreight;
+                
+                // 模糊匹配（表格中可能包含更多文字）
+                match = freightData.find(item => 
+                    item.pol === pol && 
+                    item.containerType === ctnType &&
+                    item.podRaw?.toLowerCase().includes(targetPort.toLowerCase())
+                );
+                if (match) return match.oceanFreight;
+            }
+            
+            // 40GP/40HQ 互换匹配
+            if (ctnType === "40HQ" || ctnType === "40GP") {
+                for (let targetPort of targetPorts) {
+                    let match = freightData.find(item => 
+                        item.pol === pol && 
+                        (item.containerType === "40GP" || item.containerType === "40HQ") &&
+                        item.podRaw?.toLowerCase().includes(targetPort.toLowerCase())
+                    );
+                    if (match) return match.oceanFreight;
+                }
             }
             return null;
         } else {
+            // FAK/NOR模式：直接匹配标准港口名
             const match = freightData.find(item => 
                 item.pol === pol && 
                 item.containerType === ctnType &&
@@ -317,6 +351,7 @@
             );
             if (match) return match.oceanFreight;
             
+            // 40GP/40HQ 互换匹配
             if (ctnType === "40HQ" || ctnType === "40GP") {
                 const altMatch = freightData.find(item => 
                     item.pol === pol && 
@@ -350,7 +385,14 @@
         const oceanFreight = findOceanFreight(rateType, pol, pod, ctnType);
         
         if (oceanFreight === null || oceanFreight === undefined) {
-            document.getElementById('resultArea').innerHTML = `<div style="background:#fee;padding:16px;border-radius:16px;color:#b91c1c;">❌ 未找到匹配运价<br/>RATE TYPE: ${rateType} | POL: ${pol} | POD: ${pod} | 柜型: ${ctnType}</div>`;
+            // 显示更详细的调试信息
+            const sampleData = freightData.slice(0, 5).map(d => `${d.pol} -> ${d.podRaw} (${d.containerType}: ${d.oceanFreight})`).join('<br>');
+            document.getElementById('resultArea').innerHTML = `<div style="background:#fee;padding:16px;border-radius:16px;color:#b91c1c;">
+                ❌ 未找到匹配运价<br/>
+                RATE TYPE: ${rateType} | POL: ${pol} | POD: ${pod} | 柜型: ${ctnType}<br/><br/>
+                💡 提示：表格中的数据示例：<br/>${sampleData || '无数据'}<br/><br/>
+                请检查表格中是否有对应的 POL + POD + 柜型组合
+            </div>`;
             return;
         }
         
@@ -374,9 +416,17 @@
                     <th>OCEAN FREIGHT<br><span style="font-weight:normal;">(Total COST)</span></th><th>${surchargeName}</th><th>TOTAL USD</th>
                 </thead>
                 <tbody>
-                    <tr><td>${rateType}</td><td>${carrier}</td><td>${pol}</td><td>${pod}</td><td>${ctnType}</td>
-                    <td>USD</td><td><strong style="color:#1e5a5b;">${oceanFreight.toFixed(2)}</strong></td>
-                    <td>${surcharge.toFixed(2)}</td><td class="total-cost"><strong>${totalUSD.toFixed(2)}</strong></td>
+                    <tr>
+                        <td>${rateType}</td>
+                        <td>${carrier}</td>
+                        <td>${pol}</td>
+                        <td>${pod}</td>
+                        <td>${ctnType}</td>
+                        <td>USD</td>
+                        <td><strong style="color:#1e5a5b;">${oceanFreight.toFixed(2)}</strong></td>
+                        <td>${surcharge.toFixed(2)}</td>
+                        <td class="total-cost"><strong>${totalUSD.toFixed(2)}</strong></td>
+                    </tr>
                 </tbody>
             </table>
             <div style="font-size:12px; margin-top:16px; padding:10px; background:#f0f6f7; border-radius:12px;">
