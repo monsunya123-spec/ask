@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>内部报价工具 - 按列位置读取</title>
+    <title>内部报价工具 - 多代理版</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; background: #eef2f5; margin: 0; padding: 20px; }
@@ -31,9 +31,12 @@
         .loader { border: 2px solid #e2e8f0; border-top: 2px solid #1e5a5b; border-radius: 50%; width: 22px; height: 22px; animation: spin 0.8s linear infinite; display: inline-block; vertical-align: middle; margin-right: 10px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .badge { background: #d9f0ec; border-radius: 30px; padding: 4px 12px; font-size: 11px; font-weight: 700; color: #115e59; display: inline-block; }
-        .data-info { font-size: 11px; color: #5a7a7b; margin-top: 8px; padding: 8px 12px; background: #f5f9fa; border-radius: 16px; word-break: break-all; }
+        .data-info { font-size: 11px; color: #5a7a7b; margin-top: 8px; padding: 8px 12px; background: #f5f9fa; border-radius: 16px; word-break: break-all; max-height: 200px; overflow-y: auto; }
         .refresh-btn { background: #eef2f5; color: #1e5a5b; border: 1px solid #cbd5e1; padding: 6px 16px; font-size: 12px; margin-left: 12px; }
         .refresh-btn:hover { background: #e2e8f0; transform: none; }
+        .proxy-selector { margin-bottom: 12px; padding: 8px; background: #f8fafc; border-radius: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .proxy-selector label { font-size: 12px; font-weight: 600; }
+        .proxy-selector select { padding: 4px 8px; border-radius: 12px; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -41,8 +44,8 @@
     <div class="header">
         <img src="ask_logo.jpg" alt="Logo" class="logo-img" onerror="this.style.display='none'">
         <div class="title">
-            📊 内部报价工具 · 按列位置读取
-            <span id="dataBadge" class="badge">⚙️ 使用列位置(D/E/F)</span>
+            📊 内部报价工具 · 多代理版
+            <span id="dataBadge" class="badge">⚙️ 支持多代理</span>
         </div>
     </div>
     <div class="content">
@@ -55,6 +58,17 @@
             <div><button id="quoteBtn">💰 生成报价</button></div>
         </div>
         
+        <div class="proxy-selector">
+            <label>🔄 代理服务器:</label>
+            <select id="proxySelect">
+                <option value="allorigins">allorigins.win (推荐)</option>
+                <option value="corsproxy">corsproxy.io</option>
+                <option value="thingproxy">thingproxy (备用)</option>
+                <option value="direct">直接访问(仅限已配置CORS)</option>
+            </select>
+            <button id="changeProxyBtn" style="padding: 4px 16px; margin-top: 0;">切换并重试</button>
+        </div>
+        
         <div id="resultArea"></div>
         
         <div id="statusMsg" class="status status-loading"><span class="loader"></span> 正在从 Google Sheets 读取实时数据...</div>
@@ -62,11 +76,11 @@
         
         <div class="note">
             🔄 <strong>数据源读取方式</strong><br/>
-            ✅ 按列位置读取（不依赖列名）：<strong>D列 = POL</strong>，<strong>E列 = POD</strong>，<strong>F列 = Total COST(USD)</strong><br/>
+            ✅ 按列位置读取：<strong>D列 = POL</strong>，<strong>E列 = POD</strong>，<strong>F列 = Total COST(USD)</strong><br/>
             ✅ <strong>OCEAN FREIGHT</strong> = 从您的 Google Sheets 读取 F列 数值<br/>
             ✅ <strong>FAK / NOR</strong> = OCEAN FREIGHT + Low Sulphur Fuel surcharge (FAF)<br/>
             ✅ <strong>NAC</strong> = OCEAN FREIGHT + BAU<br/>
-            📌 请确保您的表格列顺序为：A B C D(POL) E(POD) F(Total COST) ...
+            📌 如果读取失败，请在上方切换不同的代理服务器后点击"切换并重试"
         </div>
         <div style="margin-top: 16px; text-align: right;">
             <button id="refreshDataBtn" class="refresh-btn">🔄 手动刷新数据</button>
@@ -80,9 +94,13 @@
     // ============================================================
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_rkgXWvqJu9uRWkyHXLMoGXe1Y1A2pbNvpZ52xU9xr0UE7GsDNSvKXvck8Zk-CRvt7Ys1nClO96tI/pub?output=csv";
     
-    // CORS 代理服务
-    const PROXY_URL = "https://api.allorigins.win/raw?url=";
-    const FULL_URL = PROXY_URL + encodeURIComponent(CSV_URL);
+    // 代理服务器配置
+    const PROXY_CONFIG = {
+        allorigins: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+        corsproxy: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+        thingproxy: (url) => `https://thingproxy.freeboard.io/fetch/${encodeURIComponent(url)}`,
+        direct: (url) => url
+    };
     
     // POD 规则定义
     const STANDARD_PODS_NZ_FAK_NOR = ["Auckland", "Lyttelton", "Napier", "Tauranga", "Wellington"];
@@ -92,6 +110,7 @@
     // 全局运价数据集
     let freightData = [];
     let lastLoadTime = null;
+    let currentProxy = "allorigins";
     
     // FAF 和 BUC 月度数据
     const bucFafSource = {
@@ -132,33 +151,54 @@
         return result;
     }
     
-    // 按列位置读取：D列(索引3)=POL, E列(索引4)=POD, F列(索引5)=Total COST
+    async function fetchWithTimeout(url, timeout = 15000) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        try {
+            const response = await fetch(url, { 
+                cache: "no-store",
+                signal: controller.signal,
+                mode: "cors"
+            });
+            clearTimeout(timeoutId);
+            return response;
+        } catch (err) {
+            clearTimeout(timeoutId);
+            throw err;
+        }
+    }
+    
     async function loadRealTimeData() {
         const statusDiv = document.getElementById('statusMsg');
         const debugDiv = document.getElementById('debugInfo');
         const badge = document.getElementById('dataBadge');
         
-        statusDiv.innerHTML = '<span class="loader"></span> 正在读取 Google Sheets 数据（按列位置 D/E/F）...';
+        statusDiv.innerHTML = `<span class="loader"></span> 正在通过 ${currentProxy} 代理读取数据...`;
         statusDiv.className = "status status-loading";
-        debugDiv.innerHTML = "🔄 请求中，请稍候...";
+        debugDiv.innerHTML = `🔄 使用代理: ${currentProxy}，请求中...`;
         
         try {
-            const response = await fetch(FULL_URL, { cache: "no-store" });
-            if (!response.ok) throw new Error(`HTTP ${response.status}: 读取失败`);
+            const proxyUrl = PROXY_CONFIG[currentProxy](CSV_URL);
+            console.log("请求URL:", proxyUrl);
+            
+            const response = await fetchWithTimeout(proxyUrl, 20000);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
             
             const csvText = await response.text();
             const lines = csvText.split(/\r?\n/).filter(l => l.trim().length > 0);
             if (lines.length < 2) throw new Error("CSV数据为空");
             
-            // 读取表头（仅用于调试显示）
+            // 读取表头
             const headers = parseCSVLine(lines[0]);
             console.log("检测到表头:", headers);
             
-            // 按列位置定义索引（CSV中列索引从0开始）
-            // D列 = 索引3, E列 = 索引4, F列 = 索引5
-            const POL_COL_IDX = 3;      // D列
-            const POD_COL_IDX = 4;      // E列
-            const TOTAL_COST_COL_IDX = 5; // F列
+            // 按列位置读取: D列(索引3)=POL, E列(索引4)=POD, F列(索引5)=Total COST
+            const POL_COL_IDX = 3;
+            const POD_COL_IDX = 4;
+            const TOTAL_COST_COL_IDX = 5;
             
             let newData = [];
             let polSet = new Set();
@@ -167,7 +207,6 @@
             for (let i = 1; i < lines.length; i++) {
                 const cols = parseCSVLine(lines[i]);
                 
-                // 检查是否有足够的列
                 if (cols.length <= TOTAL_COST_COL_IDX) {
                     skippedCount++;
                     continue;
@@ -182,11 +221,9 @@
                     continue;
                 }
                 
-                // 确定柜型（优先从表格中找柜型列，如果没有则默认为20GP）
                 let containerType = "20GP";
-                // 尝试找柜型列（通常在B列或C列，索引1或2）
-                if (cols.length > 2) {
-                    let ct = cols[2]?.toUpperCase() || "";
+                if (cols.length > 2 && cols[2]) {
+                    let ct = cols[2].toUpperCase();
                     if (ct.includes("40HQ")) containerType = "40HQ";
                     else if (ct.includes("40GP") || ct.includes("40HC")) containerType = "40GP";
                     else if (ct.includes("20")) containerType = "20GP";
@@ -202,25 +239,25 @@
             }
             
             if (newData.length === 0) {
-                throw new Error(`未从Sheet读取到有效运价数据。共检查 ${lines.length-1} 行数据行，跳过 ${skippedCount} 行。请确保 D列=POL, E列=POD, F列=Total COST(USD) 有有效数值。`);
+                throw new Error(`未读取到有效数据。共检查 ${lines.length-1} 行，跳过 ${skippedCount} 行。请确保 D列=POL, E列=POD, F列有数字。`);
             }
             
             freightData = newData;
             lastLoadTime = new Date();
             
-            debugDiv.innerHTML = `✅ 读取成功！共 ${freightData.length} 条运价记录<br>📅 最后更新: ${lastLoadTime.toLocaleString()}<br>📍 发现 ${polSet.size} 个POL港口: ${Array.from(polSet).slice(0, 20).join(', ')}${polSet.size > 20 ? '...' : ''}<br>📊 表头信息: ${headers.slice(0, 8).join(' | ')}`;
-            statusDiv.innerHTML = `✅ 成功加载实时数据！共 ${freightData.length} 条运价 | 更新时间: ${lastLoadTime.toLocaleString()}`;
+            debugDiv.innerHTML = `✅ 代理 ${currentProxy} 读取成功！<br>📊 共 ${freightData.length} 条运价<br>📍 发现 ${polSet.size} 个POL<br>📅 更新时间: ${lastLoadTime.toLocaleString()}<br>📋 表头预览: ${headers.slice(0, 8).join(' | ')}`;
+            statusDiv.innerHTML = `✅ 成功加载！共 ${freightData.length} 条运价 | 代理: ${currentProxy} | 更新时间: ${lastLoadTime.toLocaleString()}`;
             statusDiv.className = "status status-success";
-            badge.innerHTML = `✅ ${freightData.length} 条数据`;
+            badge.innerHTML = `✅ ${freightData.length} 条`;
             
             rebuildPolOptions();
             updatePodListByRateType();
             
         } catch (err) {
             console.error("加载失败:", err);
-            statusDiv.innerHTML = `⚠️ 读取失败: ${err.message}<br><br>请确认：<br>1. 表格已发布（文件 → 分享 → 发布到网络）<br>2. 列顺序为：D列=POL, E列=POD, F列=Total COST(USD)<br>3. 数据行有完整内容`;
+            statusDiv.innerHTML = `⚠️ 代理 ${currentProxy} 读取失败: ${err.message}<br><br>请尝试：<br>1. 在上方切换到其他代理服务器<br>2. 检查网络连接<br>3. 确认表格已发布为公开网页`;
             statusDiv.className = "status status-error";
-            debugDiv.innerHTML = `错误详情: ${err.message}<br>数据链接: ${CSV_URL.substring(0, 80)}...`;
+            debugDiv.innerHTML = `错误: ${err.message}<br>代理: ${currentProxy}<br>数据链接: ${CSV_URL.substring(0, 80)}...<br><br>💡 提示: 请尝试切换到 "corsproxy" 或 "thingproxy" 代理`;
             badge.innerHTML = "⚠️ 读取失败";
             freightData = [];
         }
@@ -305,7 +342,7 @@
         }
         
         if (!freightData || freightData.length === 0) {
-            document.getElementById('resultArea').innerHTML = `<div style="background:#fee;padding:16px;border-radius:16px;color:#b91c1c;">❌ 运价数据未加载，请稍后或点击刷新按钮重试。</div>`;
+            document.getElementById('resultArea').innerHTML = `<div style="background:#fee;padding:16px;border-radius:16px;color:#b91c1c;">❌ 运价数据未加载，请先等待数据加载成功或切换代理重试。</div>`;
             return;
         }
         
@@ -333,37 +370,19 @@
         const html = `
             <table class="quote-table">
                 <thead>
-                    <tr>
-                        <th>RATE TYPE</th>
-                        <th>CARRIER</th>
-                        <th>POL</th>
-                        <th>POD</th>
-                        <th>CONTAINER TYPE</th>
-                        <th>Currency</th>
-                        <th>OCEAN FREIGHT<br><span style="font-weight:normal;">(Total COST)</span></th>
-                        <th>${surchargeName}</th>
-                        <th>TOTAL USD</th>
-                    </tr>
+                    <tr><th>RATE TYPE</th><th>CARRIER</th><th>POL</th><th>POD</th><th>CONTAINER TYPE</th><th>Currency</th>
+                    <th>OCEAN FREIGHT<br><span style="font-weight:normal;">(Total COST)</span></th><th>${surchargeName}</th><th>TOTAL USD</th>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>${rateType}</td>
-                        <td>${carrier}</td>
-                        <td>${pol}</td>
-                        <td>${pod}</td>
-                        <td>${ctnType}</td>
-                        <td>USD</td>
-                        <td><strong style="color:#1e5a5b; font-size:16px;">${oceanFreight.toFixed(2)}</strong></td>
-                        <td>${surcharge.toFixed(2)}</td>
-                        <td class="total-cost"><strong>${totalUSD.toFixed(2)}</strong></td>
-                    </tr>
+                    <tr><td>${rateType}</td><td>${carrier}</td><td>${pol}</td><td>${pod}</td><td>${ctnType}</td>
+                    <td>USD</td><td><strong style="color:#1e5a5b;">${oceanFreight.toFixed(2)}</strong></td>
+                    <td>${surcharge.toFixed(2)}</td><td class="total-cost"><strong>${totalUSD.toFixed(2)}</strong></td>
                 </tbody>
             </table>
             <div style="font-size:12px; margin-top:16px; padding:10px; background:#f0f6f7; border-radius:12px;">
                 📌 OCEAN FREIGHT = 表格中 <strong>F列 (Total COST)</strong> 的实时数值<br>
                 📌 ${surchargeName} = 月度动态值 × ${is40ft ? '2 (40尺倍数)' : '1 (20尺倍数)'}<br>
-                📅 数据读取时间: ${lastLoadTime ? lastLoadTime.toLocaleString() : '刚刚'}<br>
-                📍 读取规则: D列=POL | E列=POD | F列=Total COST
+                📅 数据读取时间: ${lastLoadTime ? lastLoadTime.toLocaleString() : '刚刚'}
             </div>
         `;
         
@@ -372,10 +391,17 @@
         document.getElementById('statusMsg').className = "status status-success";
     }
     
+    function changeProxyAndRetry() {
+        const newProxy = document.getElementById('proxySelect').value;
+        currentProxy = newProxy;
+        loadRealTimeData();
+    }
+    
     window.addEventListener('load', () => {
         loadRealTimeData();
         document.getElementById('quoteBtn').addEventListener('click', generateQuote);
         document.getElementById('refreshDataBtn').addEventListener('click', () => loadRealTimeData());
+        document.getElementById('changeProxyBtn').addEventListener('click', () => changeProxyAndRetry());
         document.getElementById('rateType').addEventListener('change', () => { updatePodListByRateType(); generateQuote(); });
         document.getElementById('pol').addEventListener('change', () => generateQuote());
         document.getElementById('pod').addEventListener('change', () => generateQuote());
