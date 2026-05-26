@@ -41,8 +41,8 @@
     <div class="header">
         <img src="ask_logo.jpg" alt="Logo" class="logo-img" onerror="this.style.display='none'">
         <div class="title">
-            📊 内部报价工具 · 精简版
-            <span id="dataBadge" class="badge">⚙️ 使用代理读取</span>
+            📊 内部报价工具 · 最终版
+            <span id="dataBadge" class="badge">⚙️ 使用最新Sheet</span>
         </div>
     </div>
     <div class="content">
@@ -57,7 +57,7 @@
         
         <div id="resultArea"></div>
         
-        <div id="statusMsg" class="status status-loading"><span class="loader"></span> 正在通过代理读取 Google Sheets 数据...</div>
+        <div id="statusMsg" class="status status-loading"><span class="loader"></span> 正在从 Google Sheets 读取实时数据...</div>
         <div id="debugInfo" class="data-info">📋 等待数据加载...</div>
         
         <div class="note">
@@ -65,7 +65,8 @@
             ✅ <strong>OCEAN FREIGHT</strong> = 从您的 Google Sheets 读取 <strong>Total COST(USD)</strong> 列实时数值<br/>
             ✅ <strong>FAK / NOR</strong> = OCEAN FREIGHT + Low Sulphur Fuel surcharge (FAF)<br/>
             ✅ <strong>NAC</strong> = OCEAN FREIGHT + BAU<br/>
-            📌 使用 CORS 代理服务读取，确保能正常获取表格数据
+            📌 POD 规则：FAK/NOR 显示简洁标准名；NAC 显示特定长字符串<br/>
+            🔗 数据源链接已更新为最新发布链接
         </div>
         <div style="margin-top: 16px; text-align: right;">
             <button id="refreshDataBtn" class="refresh-btn">🔄 手动刷新数据</button>
@@ -75,11 +76,11 @@
 
 <script>
     // ============================================================
-    // 您的 Google Sheets CSV 链接 (已发布)
+    // 您最新的 Google Sheets CSV 发布链接 (2024年12月)
     // ============================================================
-    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRWHFiyl0LNCxQYO37cth1O_hBe8AMhxyr9m4X1OVpStWSrT2KRAvVw2xxP9ZICsZ6rbXy2FXyCIRHM/pub?gid=1264580367&single=true&output=csv";
+    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_rkgXWvqJu9uRWkyHXLMoGXe1Y1A2pbNvpZ52xU9xr0UE7GsDNSvKXvck8Zk-CRvt7Ys1nClO96tI/pub?output=csv";
     
-    // 使用 CORS 代理服务 (免费、公开)
+    // CORS 代理服务 (解决跨域问题)
     const PROXY_URL = "https://api.allorigins.win/raw?url=";
     const FULL_URL = PROXY_URL + encodeURIComponent(CSV_URL);
     
@@ -92,7 +93,7 @@
     let freightData = [];
     let lastLoadTime = null;
     
-    // FAF 和 BUC 月度数据
+    // FAF 和 BUC 月度数据 (Low Sulphur Fuel surcharge 和 BAU)
     const bucFafSource = {
         months: ["Dec","Jan","Feb","Mar","Apr","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
         rows: [
@@ -137,7 +138,7 @@
         const debugDiv = document.getElementById('debugInfo');
         const badge = document.getElementById('dataBadge');
         
-        statusDiv.innerHTML = '<span class="loader"></span> 正在通过代理读取 Google Sheets 数据...';
+        statusDiv.innerHTML = '<span class="loader"></span> 正在读取 Google Sheets 最新数据...';
         statusDiv.className = "status status-loading";
         debugDiv.innerHTML = "🔄 请求中，请稍候...";
         
@@ -157,10 +158,11 @@
             const podIdx = headers.findIndex(h => h.toLowerCase().trim() === 'pod');
             const totalCostIdx = headers.findIndex(h => 
                 h.toLowerCase().includes('total cost') || 
-                h.toLowerCase().includes('total cost(usd)')
+                h.toLowerCase().includes('total cost(usd)') ||
+                h.toLowerCase() === 'total cost'
             );
             const containerIdx = headers.findIndex(h => 
-                h.toLowerCase().includes('container') || h.toLowerCase().includes('type')
+                h.toLowerCase().includes('container') || h.toLowerCase().includes('type') || h.toLowerCase() === 'size'
             );
             
             if (polIdx === -1) throw new Error("缺少 'POL' 列");
@@ -184,7 +186,8 @@
                 if (containerIdx !== -1 && cols[containerIdx]) {
                     let ct = cols[containerIdx].toUpperCase();
                     if (ct.includes("40HQ")) containerType = "40HQ";
-                    else if (ct.includes("40GP") || ct.includes("40HC")) containerType = "40GP";
+                    else if (ct.includes("40GP") || ct.includes("40HC") || ct === "40") containerType = "40GP";
+                    else if (ct.includes("20")) containerType = "20GP";
                 }
                 
                 newData.push({ 
@@ -203,17 +206,17 @@
             freightData = newData;
             lastLoadTime = new Date();
             
-            debugDiv.innerHTML = `✅ 代理读取成功！共 ${freightData.length} 条运价记录<br>📅 最后更新: ${lastLoadTime.toLocaleString()}<br>📍 发现 ${polSet.size} 个POL港口: ${Array.from(polSet).slice(0, 10).join(', ')}${polSet.size > 10 ? '...' : ''}`;
+            debugDiv.innerHTML = `✅ 读取成功！共 ${freightData.length} 条运价记录<br>📅 最后更新: ${lastLoadTime.toLocaleString()}<br>📍 发现 ${polSet.size} 个POL港口: ${Array.from(polSet).slice(0, 15).join(', ')}${polSet.size > 15 ? '...' : ''}`;
             statusDiv.innerHTML = `✅ 成功加载实时数据！共 ${freightData.length} 条运价 | 更新时间: ${lastLoadTime.toLocaleString()}`;
             statusDiv.className = "status status-success";
-            badge.innerHTML = `✅ 实时数据`;
+            badge.innerHTML = `✅ ${freightData.length} 条数据`;
             
             rebuildPolOptions();
             updatePodListByRateType();
             
         } catch (err) {
             console.error("加载失败:", err);
-            statusDiv.innerHTML = `⚠️ 读取失败: ${err.message}<br><br>可能原因：<br>1. 代理服务暂时不可用，请稍后重试<br>2. 表格链接是否仍然有效<br>3. 表格是否已发布为公开网页`;
+            statusDiv.innerHTML = `⚠️ 读取失败: ${err.message}<br><br>可能原因：<br>1. 网络问题，请稍后点击"手动刷新数据"重试<br>2. 表格链接是否仍然有效<br>3. 表格是否已发布为公开网页`;
             statusDiv.className = "status status-error";
             debugDiv.innerHTML = `错误详情: ${err.message}<br>数据链接: ${CSV_URL.substring(0, 80)}...`;
             badge.innerHTML = "⚠️ 连接失败";
@@ -251,6 +254,7 @@
     
     function findOceanFreight(rateType, pol, selectedPod, ctnType) {
         if (rateType === "NAC") {
+            // NAC: 精确匹配长字符串
             const match = freightData.find(item => 
                 item.pol === pol && 
                 item.podRaw === selectedPod && 
@@ -258,6 +262,7 @@
             );
             if (match) return match.oceanFreight;
             
+            // 40GP/40HQ 互换匹配
             if (ctnType === "40HQ" || ctnType === "40GP") {
                 const altMatch = freightData.find(item => 
                     item.pol === pol && 
@@ -268,6 +273,7 @@
             }
             return null;
         } else {
+            // FAK/NOR: 匹配原始POD包含标准名
             const match = freightData.find(item => 
                 item.pol === pol && 
                 item.containerType === ctnType &&
@@ -275,6 +281,7 @@
             );
             if (match) return match.oceanFreight;
             
+            // 40GP/40HQ 互换匹配
             if (ctnType === "40HQ" || ctnType === "40GP") {
                 const altMatch = freightData.find(item => 
                     item.pol === pol && 
@@ -308,7 +315,7 @@
         const oceanFreight = findOceanFreight(rateType, pol, pod, ctnType);
         
         if (oceanFreight === null || oceanFreight === undefined) {
-            document.getElementById('resultArea').innerHTML = `<div style="background:#fee;padding:16px;border-radius:16px;color:#b91c1c;">❌ 未找到匹配运价<br/>RATE TYPE: ${rateType} | POL: ${pol} | POD: ${pod} | 柜型: ${ctnType}</div>`;
+            document.getElementById('resultArea').innerHTML = `<div style="background:#fee;padding:16px;border-radius:16px;color:#b91c1c;">❌ 未找到匹配运价<br/>RATE TYPE: ${rateType} | POL: ${pol} | POD: ${pod} | 柜型: ${ctnType}<br/><br/>请检查表格中是否有对应的 Total COST(USD) 数据。</div>`;
             return;
         }
         
@@ -328,19 +335,37 @@
         const html = `
             <table class="quote-table">
                 <thead>
-                    <tr><th>RATE TYPE</th><th>CARRIER</th><th>POL</th><th>POD</th><th>CONTAINER TYPE</th><th>Currency</th>
-                    <th>OCEAN FREIGHT<br><span style="font-weight:normal;">(Total COST)</span></th><th>${surchargeName}</th><th>TOTAL USD</th>
+                    <tr>
+                        <th>RATE TYPE</th>
+                        <th>CARRIER</th>
+                        <th>POL</th>
+                        <th>POD</th>
+                        <th>CONTAINER TYPE</th>
+                        <th>Currency</th>
+                        <th>OCEAN FREIGHT<br><span style="font-weight:normal;">(Total COST)</span></th>
+                        <th>${surchargeName}</th>
+                        <th>TOTAL USD</th>
+                    </tr>
                 </thead>
                 <tbody>
-                    <tr><td>${rateType}</td><td>${carrier}</td><td>${pol}</td><td>${pod}</td><td>${ctnType}</td>
-                    <td>USD</td><td><strong style="color:#1e5a5b;">${oceanFreight.toFixed(2)}</strong></td>
-                    <td>${surcharge.toFixed(2)}</td><td class="total-cost"><strong>${totalUSD.toFixed(2)}</strong></td></tr>
+                    <tr>
+                        <td>${rateType}</td>
+                        <td>${carrier}</td>
+                        <td>${pol}</td>
+                        <td>${pod}</td>
+                        <td>${ctnType}</td>
+                        <td>USD</td>
+                        <td><strong style="color:#1e5a5b; font-size:16px;">${oceanFreight.toFixed(2)}</strong></td>
+                        <td>${surcharge.toFixed(2)}</td>
+                        <td class="total-cost"><strong>${totalUSD.toFixed(2)}</strong></td>
+                    </tr>
                 </tbody>
             </table>
             <div style="font-size:12px; margin-top:16px; padding:10px; background:#f0f6f7; border-radius:12px;">
                 📌 OCEAN FREIGHT = 表格中的 <strong>Total COST(USD)</strong> 列实时数值<br>
                 📌 ${surchargeName} = 月度动态值 × ${is40ft ? '2 (40尺倍数)' : '1 (20尺倍数)'}<br>
-                📅 数据读取时间: ${lastLoadTime ? lastLoadTime.toLocaleString() : '刚刚'}
+                📅 数据读取时间: ${lastLoadTime ? lastLoadTime.toLocaleString() : '刚刚'}<br>
+                🔗 数据源: 您的最新Google Sheets
             </div>
         `;
         
@@ -349,6 +374,7 @@
         document.getElementById('statusMsg').className = "status status-success";
     }
     
+    // 事件绑定
     window.addEventListener('load', () => {
         loadRealTimeData();
         document.getElementById('quoteBtn').addEventListener('click', generateQuote);
