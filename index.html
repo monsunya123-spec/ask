@@ -12,7 +12,7 @@
         .filters { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; align-items: flex-end; }
         .field { display: flex; flex-direction: column; gap: 6px; }
         .field label { font-size: 12px; font-weight: 600; color: #1e4a4b; }
-        .field select, .field input { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 12px; font-size: 14px; background: white; min-width: 150px; }
+        .field select, .field input { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 12px; font-size: 14px; background: white; min-width: 160px; }
         button { background: #1e5a5b; color: white; border: none; padding: 8px 24px; border-radius: 24px; font-weight: 600; cursor: pointer; }
         button:hover { background: #0f3b3c; }
         table { width: 100%; border-collapse: collapse; margin-top: 16px; }
@@ -30,6 +30,14 @@
 
     <div class="filters">
         <div class="field">
+            <label>📌 RATE TYPE</label>
+            <select id="rateTypeSelect">
+                <option value="FAK">FAK</option>
+                <option value="NOR">NOR</option>
+                <option value="NAC">NAC</option>
+            </select>
+        </div>
+        <div class="field">
             <label>📍 POL (D列)</label>
             <select id="polSelect"><option value="">-- 请先加载数据 --</option></select>
         </div>
@@ -38,11 +46,14 @@
             <select id="podSelect"><option value="">-- 请先选择POL --</option></select>
         </div>
         <div class="field">
-            <label>📦 柜型</label>
+            <label>📦 CONTAINER TYPE</label>
             <select id="ctnSelect">
-                <option value="20GP">20GP (Rate 20)</option>
-                <option value="40HQ">40HQ (Rate 40)</option>
-                <option value="40GP">40GP (Rate 40H)</option>
+                <option value="20GP">Rate 20</option>
+                <option value="40HQ">Rate 40</option>
+                <option value="40GP">Rate 40H</option>
+                <option value="20GP">20GP</option>
+                <option value="40HQ">40HQ</option>
+                <option value="40GP">40GP</option>
             </select>
         </div>
         <div><button id="searchBtn">🔍 查询</button></div>
@@ -57,9 +68,10 @@
         ✅ 说明：<br>
         • 数据来源：您发布的 Google Sheets CSV<br>
         • POL = 表格 D列 &nbsp; | &nbsp; POD = 表格 E列<br>
-        • 显示字段：F列(OCEAN FREIGHT) / I列 / J列(FAF) / K列(BAU)<br>
-        • 柜型映射：20GP ← Rate 20 &nbsp; | &nbsp; 40HQ ← Rate 40 &nbsp; | &nbsp; 40GP ← Rate 40H<br>
-        • <strong>所有数值均为表格原始值，不做任何加法计算</strong>
+        • 显示字段：<strong>OCEAN FREIGHT</strong>(F列) / <strong>FAF</strong>(J列) / <strong>BAU</strong>(K列)<br>
+        • <strong>NAC模式</strong>：POD 显示为 Auckland;Tauranga;Lyttelton;Wellington 或 Sydney,Melbourne,Brisbane 长字符串<br>
+        • <strong>柜型映射</strong>：Rate 20 → 20GP &nbsp;|&nbsp; Rate 40 → 40HQ &nbsp;|&nbsp; Rate 40H → 40GP<br>
+        • <strong>所有数值均为表格原始值，不做任何加法</strong>
     </div>
 </div>
 
@@ -70,11 +82,22 @@
     // 使用代理避免跨域
     const PROXY = "https://api.allorigins.win/raw?url=";
     
-    let allRows = [];      // 存储所有原始行
-    let polList = [];      // 所有POL
-    let podMap = new Map(); // POL -> 该POL下的所有POD
+    // NAC 长字符串配置
+    const NAC_PODS_NZ = "Auckland;Tauranga;Lyttelton;Wellington";
+    const NAC_PODS_AU = "Sydney, New South Wales, Australia;Melbourne, Victoria, Australia;Brisbane, Queensland, Australia";
     
-    // 解析CSV行（处理引号内的逗号）
+    // 柜型映射：下拉选项的值 -> 表格中的柜型
+    const CTN_MAP = {
+        "20GP": "20GP",
+        "40HQ": "40HQ",
+        "40GP": "40GP"
+    };
+    
+    let allRows = [];           // 存储所有原始行
+    let polList = [];           // 所有POL
+    let podMap = new Map();     // POL -> 该POL下的所有POD（实际表格中的POD）
+    
+    // 解析CSV行
     function parseCSVLine(line) {
         const result = [];
         let inQuote = false;
@@ -108,23 +131,20 @@
             
             if (lines.length < 2) throw new Error('CSV数据为空');
             
-            // 解析所有行
             const rows = [];
             for (let i = 1; i < lines.length; i++) {
                 const cols = parseCSVLine(lines[i]);
-                if (cols.length < 11) continue; // 至少需要A-K列
+                if (cols.length < 11) continue;
                 
-                // 提取需要的列 (0-based索引)
-                // A=0, B=1, C=2, D=3, E=4, F=5, G=6, H=7, I=8, J=9, K=10
-                const pol = cols[3]?.trim();      // D列
-                const pod = cols[4]?.trim();      // E列
+                const pol = cols[3]?.trim();           // D列
+                const pod = cols[4]?.trim();           // E列
                 const ocean = parseFloat(cols[5]?.replace(/[^0-9.-]/g, '')) || 0;   // F列
                 const feeI = parseFloat(cols[8]?.replace(/[^0-9.-]/g, '')) || 0;     // I列
                 const feeJ = parseFloat(cols[9]?.replace(/[^0-9.-]/g, '')) || 0;     // J列 (FAF)
                 const feeK = parseFloat(cols[10]?.replace(/[^0-9.-]/g, '')) || 0;    // K列 (BAU)
-                const containerRaw = cols[6]?.trim().toUpperCase() || ''; // G列柜型
+                const containerRaw = cols[6]?.trim().toUpperCase() || '';            // G列柜型
                 
-                // 柜型映射：根据原始柜型判断属于哪个标准类型
+                // 柜型识别
                 let ctnType = '';
                 if (containerRaw.includes('20')) ctnType = '20GP';
                 else if (containerRaw.includes('40HQ') || containerRaw === '40H') ctnType = '40HQ';
@@ -138,9 +158,8 @@
                     pod: pod,
                     ctnType: ctnType,
                     ocean: ocean,
-                    feeI: feeI,
-                    feeJ: feeJ,
-                    feeK: feeK
+                    faf: feeJ,      // J列 = FAF
+                    bau: feeK       // K列 = BAU
                 });
             }
             
@@ -177,28 +196,46 @@
         }
     }
     
-    // POL变化时更新POD下拉框
-    function updatePodOptions() {
+    // 根据 RATE TYPE 更新 POD 下拉框
+    function updatePodByRateType() {
+        const rateType = document.getElementById('rateTypeSelect').value;
         const pol = document.getElementById('polSelect').value;
         const podSelect = document.getElementById('podSelect');
         
-        if (!pol || !podMap.has(pol)) {
-            podSelect.innerHTML = '<option value="">-- 请先选择POL --</option>';
-            return;
+        if (rateType === 'NAC') {
+            // NAC 模式：显示两个特殊长字符串
+            podSelect.innerHTML = `
+                <option value="${NAC_PODS_NZ}">${NAC_PODS_NZ}</option>
+                <option value="${NAC_PODS_AU}">${NAC_PODS_AU}</option>
+            `;
+        } else {
+            // FAK/NOR 模式：显示实际表格中的 POD
+            if (!pol || !podMap.has(pol)) {
+                podSelect.innerHTML = '<option value="">-- 请先选择POL --</option>';
+                return;
+            }
+            const pods = podMap.get(pol);
+            podSelect.innerHTML = '<option value="">-- 请选择POD --</option>';
+            for (const pod of pods) {
+                podSelect.innerHTML += `<option value="${pod}">${pod}</option>`;
+            }
         }
-        
-        const pods = podMap.get(pol);
-        podSelect.innerHTML = '<option value="">-- 请选择POD --</option>';
-        for (const pod of pods) {
-            podSelect.innerHTML += `<option value="${pod}">${pod}</option>`;
+    }
+    
+    // POL变化时更新POD（仅 FAK/NOR 模式）
+    function onPolChange() {
+        const rateType = document.getElementById('rateTypeSelect').value;
+        if (rateType !== 'NAC') {
+            updatePodByRateType();
         }
     }
     
     // 查询并显示结果
     function search() {
+        const rateType = document.getElementById('rateTypeSelect').value;
         const pol = document.getElementById('polSelect').value;
-        const pod = document.getElementById('podSelect').value;
-        const ctn = document.getElementById('ctnSelect').value;
+        let pod = document.getElementById('podSelect').value;
+        const ctnOption = document.getElementById('ctnSelect').value;
         const resultDiv = document.getElementById('resultArea');
         
         if (!pol || !pod) {
@@ -206,11 +243,28 @@
             return;
         }
         
+        // 柜型映射：下拉选项的值 -> 表格柜型
+        let targetCtn = '';
+        if (ctnOption === '20GP') targetCtn = '20GP';
+        else if (ctnOption === '40HQ') targetCtn = '40HQ';
+        else if (ctnOption === '40GP') targetCtn = '40GP';
+        else {
+            resultDiv.innerHTML = '<div class="status error">❌ 无效的柜型选项</div>';
+            return;
+        }
+        
+        // NAC 模式：长字符串需要拆解，匹配第一个实际港口
+        let actualPod = pod;
+        if (rateType === 'NAC') {
+            if (pod === NAC_PODS_NZ) actualPod = 'Auckland';
+            else if (pod === NAC_PODS_AU) actualPod = 'Sydney';
+        }
+        
         // 查找匹配的行
         const matched = allRows.find(row => 
             row.pol === pol && 
-            row.pod === pod && 
-            row.ctnType === ctn
+            row.pod === actualPod && 
+            row.ctnType === targetCtn
         );
         
         if (!matched) {
@@ -218,35 +272,33 @@
                 <div class="status error">❌ 未找到匹配数据</div>
                 <table>
                     <thead><tr><th>POL</th><th>POD</th><th>柜型</th><th>状态</th></tr></thead>
-                    <tbody><tr><td>${pol}</td><td>${pod}</td><td>${ctn}</td><td>无此组合</td></tr></tbody>
+                    <tbody><tr><td>${pol}</td><td>${pod}</td><td>${ctnOption}</td><td>无此组合</td></tr></tbody>
                 </table>
             `;
             return;
         }
         
-        // 显示结果（只展示原始值，不做加法）
+        // 显示结果（只展示原始值，无 TOTAL USD）
         resultDiv.innerHTML = `
             <table>
                 <thead>
                     <tr>
                         <th>POL</th>
                         <th>POD</th>
-                        <th>柜型</th>
-                        <th>OCEAN FREIGHT<br>(F列)</th>
-                        <th>附加费 I<br>(I列)</th>
-                        <th>FAF<br>(J列)</th>
-                        <th>BAU<br>(K列)</th>
+                        <th>CONTAINER TYPE</th>
+                        <th>OCEAN FREIGHT</th>
+                        <th>FAF</th>
+                        <th>BAU</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td>${matched.pol}</td>
-                        <td>${matched.pod}</td>
-                        <td>${matched.ctnType}</td>
+                        <td>${pod}</td>
+                        <td>${ctnOption}</td>
                         <td class="value">${matched.ocean.toFixed(2)}</td>
-                        <td class="value">${matched.feeI.toFixed(2)}</td>
-                        <td class="value">${matched.feeJ.toFixed(2)}</td>
-                        <td class="value">${matched.feeK.toFixed(2)}</td>
+                        <td class="value">${matched.faf.toFixed(2)}</td>
+                        <td class="value">${matched.bau.toFixed(2)}</td>
                     </tr>
                 </tbody>
             </table>
@@ -255,7 +307,12 @@
     }
     
     // 事件绑定
-    document.getElementById('polSelect').addEventListener('change', updatePodOptions);
+    document.getElementById('rateTypeSelect').addEventListener('change', () => {
+        updatePodByRateType();
+    });
+    document.getElementById('polSelect').addEventListener('change', () => {
+        onPolChange();
+    });
     document.getElementById('searchBtn').addEventListener('click', search);
     document.getElementById('refreshBtn').addEventListener('click', () => {
         loadData();
