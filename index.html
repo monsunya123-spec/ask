@@ -1,243 +1,713 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh">
 <head>
   <meta charset="UTF-8" />
-  <title>Freight Quote Tool</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>报价查询工具</title>
+
   <style>
-    body { font-family: Arial, sans-serif; background:#f4f6f9; padding:30px; }
-    .container { max-width:900px; margin:auto; background:white; padding:30px; border-radius:12px; }
-    label { display:block; margin-top:16px; font-weight:bold; }
-    select, button { width:100%; padding:10px; margin-top:6px; }
-    button { margin-top:24px; background:#003366; color:white; border:none; border-radius:8px; cursor:pointer; }
-    .result { display:none; margin-top:24px; background:#eef4ff; padding:20px; border-radius:10px; }
-    .row { display:flex; justify-content:space-between; margin:10px 0; }
-    .total { border-top:1px solid #ccc; padding-top:12px; font-size:20px; font-weight:bold; }
+
+    *{
+      box-sizing:border-box;
+    }
+
+    body{
+      font-family:Arial, sans-serif;
+      background:#f5f7fa;
+      padding:30px;
+      color:#1f2937;
+    }
+
+    .container{
+      max-width:1200px;
+      margin:auto;
+      background:white;
+      padding:30px;
+      border-radius:16px;
+      box-shadow:0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    h1{
+      margin-bottom:30px;
+      color:#0f3d3e;
+      font-size:42px;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:24px;
+    }
+
+    .field{
+      display:flex;
+      flex-direction:column;
+    }
+
+    label{
+      font-size:16px;
+      font-weight:bold;
+      margin-bottom:10px;
+      color:#214c4d;
+    }
+
+    select{
+      height:70px;
+      border-radius:22px;
+      border:2px solid #cfd8e3;
+      padding:0 20px;
+      font-size:20px;
+      background:white;
+    }
+
+    .button-row{
+      margin-top:28px;
+      display:flex;
+      gap:20px;
+    }
+
+    button{
+      height:70px;
+      border:none;
+      border-radius:40px;
+      padding:0 40px;
+      font-size:24px;
+      font-weight:bold;
+      cursor:pointer;
+      background:#0f5d5d;
+      color:white;
+    }
+
+    button:hover{
+      opacity:0.9;
+    }
+
+    .result{
+      margin-top:40px;
+      background:#eef6ff;
+      border-radius:14px;
+      padding:30px;
+      display:none;
+    }
+
+    .error{
+      margin-top:40px;
+      background:#ffe8e8;
+      color:#c81e1e;
+      border-radius:14px;
+      padding:30px;
+      display:none;
+      font-size:22px;
+    }
+
+    .result-title{
+      font-size:28px;
+      margin-bottom:20px;
+      color:#0f3d3e;
+      font-weight:bold;
+    }
+
+    .row{
+      display:flex;
+      justify-content:space-between;
+      margin:14px 0;
+      font-size:22px;
+    }
+
+    .total{
+      border-top:2px solid #d5dce5;
+      padding-top:18px;
+      margin-top:20px;
+      font-size:28px;
+      font-weight:bold;
+      color:#0f3d3e;
+    }
+
+    @media(max-width:900px){
+
+      .grid{
+        grid-template-columns:1fr;
+      }
+
+      button{
+        width:100%;
+      }
+
+      .button-row{
+        flex-direction:column;
+      }
+
+    }
+
   </style>
 </head>
 
 <body>
+
 <div class="container">
-  <h1>Freight Quote Tool</h1>
 
-  <label>FAK / NAC</label>
-  <select id="rateType"></select>
+  <h1>📋 报价查询工具</h1>
 
-  <label>POL</label>
-  <select id="pol"></select>
+  <div class="grid">
 
-  <label>POD</label>
-  <select id="pod"></select>
+    <div class="field">
+      <label>📌 RATE TYPE</label>
+      <select id="rateType"></select>
+    </div>
 
-  <label>Container Type</label>
-  <select id="containerType"></select>
+    <div class="field">
+      <label>📍 POL</label>
+      <select id="pol"></select>
+    </div>
 
-  <button onclick="calculateQuote()">Calculate Quote</button>
+    <div class="field">
+      <label>📍 POD</label>
+      <select id="pod"></select>
+    </div>
 
-  <div id="result" class="result"></div>
+    <div class="field">
+      <label>📦 CONTAINER TYPE</label>
+      <select id="containerType"></select>
+    </div>
+
+  </div>
+
+  <div class="button-row">
+
+    <button onclick="calculateQuote()">
+      🔍 查询
+    </button>
+
+    <button onclick="loadData()">
+      🔄 刷新数据
+    </button>
+
+  </div>
+
+  <div id="errorBox" class="error"></div>
+
+  <div id="resultBox" class="result"></div>
+
 </div>
 
 <script>
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_rkgXWvqJu9uRWkyHXLMoGXe1Y1A2pbNvpZ52xU9xr0UE7GsDNSvKXvck8Zk-CRvt7Ys1nClO96tI/pub?output=csv";
+
+const CSV_URL =
+"https://docs.google.com/spreadsheets/d/e/2PACX-1vT_rkgXWvqJu9uRWkyHXLMoGXe1Y1A2pbNvpZ52xU9xr0UE7GsDNSvKXvck8Zk-CRvt7Ys1nClO96tI/pub?output=csv";
 
 let allRows = [];
 
-function parseCSV(text) {
+
+/* =========================
+   CSV PARSER
+========================= */
+
+function parseCSV(text){
+
   const rows = [];
   let current = [];
   let value = "";
   let inQuotes = false;
 
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    const next = text[i + 1];
+  for(let i=0;i<text.length;i++){
 
-    if (char === '"' && inQuotes && next === '"') {
+    const char = text[i];
+    const next = text[i+1];
+
+    if(char === '"' && inQuotes && next === '"'){
       value += '"';
       i++;
-    } else if (char === '"') {
+    }
+
+    else if(char === '"'){
       inQuotes = !inQuotes;
-    } else if (char === "," && !inQuotes) {
+    }
+
+    else if(char === "," && !inQuotes){
       current.push(value.trim());
       value = "";
-    } else if ((char === "\n" || char === "\r") && !inQuotes) {
-      if (value || current.length) {
+    }
+
+    else if((char === "\n" || char === "\r") && !inQuotes){
+
+      if(value || current.length){
+
         current.push(value.trim());
+
         rows.push(current);
+
         current = [];
         value = "";
+
       }
-      if (char === "\r" && next === "\n") i++;
-    } else {
+
+      if(char === "\r" && next === "\n"){
+        i++;
+      }
+
+    }
+
+    else{
       value += char;
     }
+
   }
 
-  if (value || current.length) {
+  if(value || current.length){
+
     current.push(value.trim());
+
     rows.push(current);
+
   }
 
-  const headers = rows[0].map(h => h.trim());
+  const headers = rows[0].map(h=>h.trim());
 
-  return rows.slice(1).map(r => {
+  return rows.slice(1).map(r=>{
+
     const obj = {};
-    headers.forEach((h, i) => obj[h] = r[i] ? r[i].trim() : "");
+
+    headers.forEach((h,i)=>{
+      obj[h] = r[i] ? r[i].trim() : "";
+    });
+
     return obj;
+
   });
+
 }
 
-function getCol(row, names) {
-  for (const name of names) {
-    if (row[name] !== undefined) return row[name];
+
+/* =========================
+   HELPERS
+========================= */
+
+function getCol(row,names){
+
+  for(let n of names){
+
+    if(row[n] !== undefined){
+      return row[n];
+    }
+
   }
+
   return "";
+
 }
 
-function unique(arr) {
+
+function unique(arr){
+
   return [...new Set(arr.filter(Boolean))];
+
 }
 
-function fillSelect(id, values) {
-  const select = document.getElementById(id);
-  select.innerHTML = `<option value="">Please select</option>`;
 
-  values.forEach(v => {
+function fillSelect(id,values){
+
+  const select = document.getElementById(id);
+
+  select.innerHTML =
+    `<option value="">请选择</option>`;
+
+  values.forEach(v=>{
+
     const option = document.createElement("option");
+
     option.value = v;
     option.textContent = v;
+
     select.appendChild(option);
-  });
-}
 
-function num(v) {
-  if (!v) return 0;
-  return Number(String(v).replace(/[^0-9.-]/g, "")) || 0;
-}
-
-async function loadData() {
-  const res = await fetch(CSV_URL);
-  const text = await res.text();
-
-  allRows = parseCSV(text);
-
-  fillSelect("rateType", unique(allRows.map(r =>
-    getCol(r, ["FAK/NAC", "FAK/NAC/NOR", "Rate Type", "TYPE", "Type"])
-  )));
-
-  updatePOL();
-}
-
-function updatePOL() {
-  const rateType = document.getElementById("rateType").value;
-
-  const filtered = allRows.filter(r => {
-    const rowRate = getCol(r, ["FAK/NAC", "FAK/NAC/NOR", "Rate Type", "TYPE", "Type"]);
-    return !rateType || rowRate === rateType;
   });
 
-  fillSelect("pol", unique(filtered.map(r =>
-    getCol(r, ["POL", "Port of Loading"])
-  )));
-
-  updatePOD();
 }
 
-function updatePOD() {
-  const rateType = document.getElementById("rateType").value;
-  const pol = document.getElementById("pol").value;
 
-  const filtered = allRows.filter(r => {
-    const rowRate = getCol(r, ["FAK/NAC", "FAK/NAC/NOR", "Rate Type", "TYPE", "Type"]);
-    const rowPol = getCol(r, ["POL", "Port of Loading"]);
+function num(v){
 
-    return (!rateType || rowRate === rateType) &&
-           (!pol || rowPol === pol);
-  });
+  if(!v) return 0;
 
-  fillSelect("pod", unique(filtered.map(r =>
-    getCol(r, ["POD", "Port of Discharge"])
-  )));
+  return Number(
+    String(v).replace(/[^0-9.-]/g,"")
+  ) || 0;
 
-  updateContainerType();
 }
 
-function updateContainerType() {
-  const rateType = document.getElementById("rateType").value;
-  const pol = document.getElementById("pol").value;
-  const pod = document.getElementById("pod").value;
 
-  const filtered = allRows.filter(r => {
-    const rowRate = getCol(r, ["FAK/NAC", "FAK/NAC/NOR", "Rate Type", "TYPE", "Type"]);
-    const rowPol = getCol(r, ["POL", "Port of Loading"]);
-    const rowPod = getCol(r, ["POD", "Port of Discharge"]);
+/* =========================
+   LOAD DATA
+========================= */
 
-    return (!rateType || rowRate === rateType) &&
-           (!pol || rowPol === pol) &&
-           (!pod || rowPod === pod);
-  });
+async function loadData(){
 
-  fillSelect("containerType", unique(filtered.map(r =>
-    getCol(r, ["CONTAINER TYPE", "Container Type"])
-  )));
-}
+  try{
 
-function calculateQuote() {
-  const rateType = document.getElementById("rateType").value;
-  const pol = document.getElementById("pol").value;
-  const pod = document.getElementById("pod").value;
-  const containerType = document.getElementById("containerType").value;
+    const response = await fetch(CSV_URL);
 
-  const matched = allRows.find(r => {
-    const rowRate = getCol(r, ["FAK/NAC", "FAK/NAC/NOR", "Rate Type", "TYPE", "Type"]);
-    const rowPol = getCol(r, ["POL", "Port of Loading"]);
-    const rowPod = getCol(r, ["POD", "Port of Discharge"]);
-    const rowContainer = getCol(r, ["CONTAINER TYPE", "Container Type"]);
+    const text = await response.text();
 
-    return rowRate === rateType &&
-           rowPol === pol &&
-           rowPod === pod &&
-           rowContainer === containerType;
-  });
+    allRows = parseCSV(text);
 
-  const result = document.getElementById("result");
+    initDropdowns();
 
-  if (!matched) {
-    result.style.display = "block";
-    result.innerHTML = "<strong>No matching quote found.</strong>";
-    return;
   }
 
-  const ocean = num(getCol(matched, ["OCEAN FREIGHT"]));
-  const faf = num(getCol(matched, ["Low Sulphur Fuel surcharge (FAF)", "FAF"]));
-  const bau = num(getCol(matched, ["BAU"]));
-  const total = num(getCol(matched, ["Total COST(USD)", "TOTAL COST", "Total Cost"]));
+  catch(error){
 
-  result.style.display = "block";
-  result.innerHTML = `
-    <h2>Quote Result</h2>
+    console.error(error);
 
-    <div class="row"><span>FAK / NAC</span><strong>${getCol(matched, ["FAK/NAC"])}</strong></div>
-    <div class="row"><span>Carrier</span><strong>${getCol(matched, ["CARRIER"])}</strong></div>
-    <div class="row"><span>Line</span><strong>${getCol(matched, ["Line"])}</strong></div>
-    <div class="row"><span>POL</span><strong>${getCol(matched, ["POL"])}</strong></div>
-    <div class="row"><span>POD</span><strong>${getCol(matched, ["POD"])}</strong></div>
-    <div class="row"><span>Container Type</span><strong>${getCol(matched, ["CONTAINER TYPE", "Container Type"])}</strong></div>
+    alert("数据加载失败");
+
+  }
+
+}
+
+
+/* =========================
+   INIT DROPDOWNS
+========================= */
+
+function initDropdowns(){
+
+  const rateTypes = unique(
+    allRows.map(r=>
+      getCol(r,[
+        "FAK/NAC",
+        "FAK/NAC/NOR"
+      ])
+    )
+  );
+
+  fillSelect("rateType",rateTypes);
+
+  updatePOL();
+
+}
+
+
+/* =========================
+   POL
+========================= */
+
+function updatePOL(){
+
+  const rateType =
+    document.getElementById("rateType").value;
+
+  const filtered = allRows.filter(r=>{
+
+    const rowRate =
+      getCol(r,[
+        "FAK/NAC",
+        "FAK/NAC/NOR"
+      ]);
+
+    return !rateType || rowRate === rateType;
+
+  });
+
+  const pols = unique(
+    filtered.map(r=>
+      getCol(r,["POL"])
+    )
+  );
+
+  fillSelect("pol",pols);
+
+  updatePOD();
+
+}
+
+
+/* =========================
+   POD
+========================= */
+
+function updatePOD(){
+
+  const rateType =
+    document.getElementById("rateType").value;
+
+  const pol =
+    document.getElementById("pol").value;
+
+  const filtered = allRows.filter(r=>{
+
+    const rowRate =
+      getCol(r,[
+        "FAK/NAC",
+        "FAK/NAC/NOR"
+      ]);
+
+    const rowPol =
+      getCol(r,["POL"]);
+
+    return (
+      (!rateType || rowRate === rateType)
+      &&
+      (!pol || rowPol === pol)
+    );
+
+  });
+
+  const pods = unique(
+    filtered.map(r=>
+      getCol(r,["POD"])
+    )
+  );
+
+  fillSelect("pod",pods);
+
+  updateContainer();
+
+}
+
+
+/* =========================
+   CONTAINER
+========================= */
+
+function updateContainer(){
+
+  const rateType =
+    document.getElementById("rateType").value;
+
+  const pol =
+    document.getElementById("pol").value;
+
+  const pod =
+    document.getElementById("pod").value;
+
+  const filtered = allRows.filter(r=>{
+
+    const rowRate =
+      getCol(r,[
+        "FAK/NAC",
+        "FAK/NAC/NOR"
+      ]);
+
+    const rowPol =
+      getCol(r,["POL"]);
+
+    const rowPod =
+      getCol(r,["POD"]);
+
+    return (
+      (!rateType || rowRate === rateType)
+      &&
+      (!pol || rowPol === pol)
+      &&
+      (!pod || rowPod === pod)
+    );
+
+  });
+
+  const containers = unique(
+    filtered.map(r=>
+      getCol(r,[
+        "CONTAINER TYPE",
+        "Container Type"
+      ])
+    )
+  );
+
+  fillSelect("containerType",containers);
+
+}
+
+
+/* =========================
+   CALCULATE
+========================= */
+
+function calculateQuote(){
+
+  const rateType =
+    document.getElementById("rateType").value;
+
+  const pol =
+    document.getElementById("pol").value;
+
+  const pod =
+    document.getElementById("pod").value;
+
+  const containerType =
+    document.getElementById("containerType").value;
+
+
+  const matched = allRows.find(r=>{
+
+    const rowRate =
+      getCol(r,[
+        "FAK/NAC",
+        "FAK/NAC/NOR"
+      ]);
+
+    const rowPol =
+      getCol(r,["POL"]);
+
+    const rowPod =
+      getCol(r,["POD"]);
+
+    const rowContainer =
+      getCol(r,[
+        "CONTAINER TYPE",
+        "Container Type"
+      ]);
+
+    return (
+      rowRate === rateType
+      &&
+      rowPol === pol
+      &&
+      rowPod === pod
+      &&
+      rowContainer === containerType
+    );
+
+  });
+
+
+  const resultBox =
+    document.getElementById("resultBox");
+
+  const errorBox =
+    document.getElementById("errorBox");
+
+
+  resultBox.style.display = "none";
+  errorBox.style.display = "none";
+
+
+  if(!matched){
+
+    errorBox.style.display = "block";
+
+    errorBox.innerHTML = `
+      ❌ 未找到匹配数据<br><br>
+      POL: ${pol}<br>
+      POD: ${pod}<br>
+      柜型: ${containerType}
+    `;
+
+    return;
+
+  }
+
+
+  const ocean =
+    num(getCol(matched,[
+      "OCEAN FREIGHT"
+    ]));
+
+  const faf =
+    num(getCol(matched,[
+      "Low Sulphur Fuel surcharge (FAF)",
+      "FAF"
+    ]));
+
+  const bau =
+    num(getCol(matched,[
+      "BAU"
+    ]));
+
+  const total =
+    num(getCol(matched,[
+      "Total COST(USD)"
+    ]));
+
+
+  resultBox.style.display = "block";
+
+  resultBox.innerHTML = `
+
+    <div class="result-title">
+      ✅ 报价结果
+    </div>
+
+    <div class="row">
+      <span>RATE TYPE</span>
+      <strong>${rateType}</strong>
+    </div>
+
+    <div class="row">
+      <span>CARRIER</span>
+      <strong>${getCol(matched,["CARRIER"])}</strong>
+    </div>
+
+    <div class="row">
+      <span>LINE</span>
+      <strong>${getCol(matched,["Line"])}</strong>
+    </div>
+
+    <div class="row">
+      <span>POL</span>
+      <strong>${pol}</strong>
+    </div>
+
+    <div class="row">
+      <span>POD</span>
+      <strong>${pod}</strong>
+    </div>
+
+    <div class="row">
+      <span>CONTAINER TYPE</span>
+      <strong>${containerType}</strong>
+    </div>
 
     <hr>
 
-    <div class="row"><span>OCEAN FREIGHT</span><strong>USD ${ocean.toFixed(2)}</strong></div>
-    <div class="row"><span>FAF</span><strong>USD ${faf.toFixed(2)}</strong></div>
-    <div class="row"><span>BAU</span><strong>USD ${bau.toFixed(2)}</strong></div>
+    <div class="row">
+      <span>OCEAN FREIGHT</span>
+      <strong>USD ${ocean.toFixed(2)}</strong>
+    </div>
 
-    <div class="row total"><span>TOTAL COST</span><strong>USD ${total.toFixed(2)}</strong></div>
+    <div class="row">
+      <span>FAF</span>
+      <strong>USD ${faf.toFixed(2)}</strong>
+    </div>
+
+    <div class="row">
+      <span>BAU</span>
+      <strong>USD ${bau.toFixed(2)}</strong>
+    </div>
+
+    <div class="row total">
+      <span>TOTAL COST</span>
+      <strong>USD ${total.toFixed(2)}</strong>
+    </div>
+
   `;
+
 }
 
-document.getElementById("rateType").addEventListener("change", updatePOL);
-document.getElementById("pol").addEventListener("change", updatePOD);
-document.getElementById("pod").addEventListener("change", updateContainerType);
+
+/* =========================
+   EVENTS
+========================= */
+
+document
+.getElementById("rateType")
+.addEventListener("change",updatePOL);
+
+document
+.getElementById("pol")
+.addEventListener("change",updatePOD);
+
+document
+.getElementById("pod")
+.addEventListener("change",updateContainer);
+
+
+/* =========================
+   INIT
+========================= */
 
 loadData();
+
 </script>
+
 </body>
 </html>
