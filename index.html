@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>内部报价工具 </title>
+    <title>内部报价工具</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; background: #eef2f5; margin: 0; padding: 20px; }
-        .container { max-width: 1600px; margin: 0 auto; background: white; border-radius: 32px; box-shadow: 0 12px 28px rgba(0,0,0,0.08); overflow-x: auto; }
+        .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 32px; box-shadow: 0 12px 28px rgba(0,0,0,0.08); overflow-x: auto; }
         .header { background: #1e3a3b; color: white; padding: 16px 28px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; border-radius: 32px 32px 0 0; }
         .logo-img { height: 48px; width: auto; max-width: 180px; object-fit: contain; background: white; border-radius: 12px; padding: 6px 16px; }
         .title { font-size: 22px; font-weight: 600; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -18,10 +18,10 @@
         .field input, .field select { padding: 10px 14px; border: 1px solid #cbdbe6; border-radius: 20px; font-size: 14px; background: white; min-width: 180px; }
         button { background: #1e5a5b; color: white; border: none; padding: 10px 34px; border-radius: 40px; font-weight: 700; cursor: pointer; transition: 0.2s; margin-top: 8px; font-size: 14px; }
         button:hover { background: #0f3b3c; }
-        .quote-table { width: 100%; border-collapse: collapse; font-size: 13px; border-radius: 16px; overflow: hidden; }
-        .quote-table th { background: #e4edef; padding: 14px 10px; text-align: left; font-weight: 700; border-bottom: 2px solid #cbdadf; }
-        .quote-table td { padding: 12px 10px; border-bottom: 1px solid #e2e9ef; }
-        .total-cost { font-weight: 800; color: #1e5a5b; font-size: 15px; }
+        .quote-table { width: 100%; border-collapse: collapse; font-size: 14px; border-radius: 16px; overflow: hidden; }
+        .quote-table th { background: #e4edef; padding: 14px 12px; text-align: left; font-weight: 700; border-bottom: 2px solid #cbdadf; }
+        .quote-table td { padding: 12px 12px; border-bottom: 1px solid #e2e9ef; }
+        .total-cost { font-weight: 800; color: #1e5a5b; font-size: 16px; }
         .note { margin-top: 28px; font-size: 12px; color: #2c6162; background: #eff7f8; padding: 14px 24px; border-radius: 24px; border-left: 5px solid #1e5a5b; }
         .status { font-size: 13px; margin-top: 18px; padding: 10px 18px; border-radius: 30px; }
         .status-success { background: #e7f3ef; color: #2b6e4f; }
@@ -31,7 +31,7 @@
         .loader { border: 2px solid #e2e8f0; border-top: 2px solid #1e5a5b; border-radius: 50%; width: 22px; height: 22px; animation: spin 0.8s linear infinite; display: inline-block; vertical-align: middle; margin-right: 10px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .badge { background: #d9f0ec; border-radius: 30px; padding: 4px 12px; font-size: 11px; font-weight: 700; color: #115e59; display: inline-block; }
-        .data-info { font-size: 11px; color: #5a7a7b; margin-top: 8px; padding: 8px 12px; background: #f5f9fa; border-radius: 16px; word-break: break-all; max-height: 120px; overflow-y: auto; }
+        .data-info { font-size: 11px; color: #5a7a7b; margin-top: 8px; padding: 8px 12px; background: #f5f9fa; border-radius: 16px; word-break: break-all; }
         .refresh-btn { background: #eef2f5; color: #1e5a5b; border: 1px solid #cbd5e1; padding: 6px 16px; font-size: 12px; margin-left: 12px; }
         .refresh-btn:hover { background: #e2e8f0; transform: none; }
     </style>
@@ -41,7 +41,7 @@
     <div class="header">
         <img src="ask_logo.jpg" alt="Logo" class="logo-img" onerror="this.style.display='none'">
         <div class="title">
-            📊 内部报价工具
+            📊 内部报价工具 · 精简版
             <span id="dataBadge" class="badge">⚙️ 直连Sheet</span>
         </div>
     </div>
@@ -50,22 +50,22 @@
             <div class="field"><label>📌 RATE TYPE</label><select id="rateType"><option>FAK</option><option>NOR</option><option>NAC</option></select></div>
             <div class="field"><label>🚢 CARRIER</label><input id="carrier" value="COSCO"></div>
             <div class="field"><label>📍 POL</label><select id="pol"><option value="">-- 选择POL --</option></select></div>
-            <div class="field"><label>📍 POD</label><select id="pod"><option value="">-- 请先选择POL --</option></select></div>
-            <div class="field"><label>⏱️ T/T (天)</label><input id="tt" value="22"></div>
+            <div class="field"><label>📍 POD</label><select id="pod"><option value="">-- 请先选择RATE TYPE --</option></select></div>
             <div class="field"><label>📦 CONTAINER TYPE</label><select id="ctnType"><option>20GP</option><option>40GP</option><option>40HQ</option></select></div>
             <div><button id="quoteBtn">💰 生成报价</button></div>
         </div>
+        
         <div id="resultArea"></div>
+        
         <div id="statusMsg" class="status status-loading"><span class="loader"></span> 正在从 Google Sheets 读取实时运价数据...</div>
         <div id="debugInfo" class="data-info">📋 等待数据加载...</div>
+        
         <div class="note">
-            🔄 <strong>数据源与POD规则（严格遵守）</strong><br/>
-            ✅ <strong>海运费</strong> = 始终从您的 Google Sheets 链接读取 <strong>Total COST(USD)</strong> 列实时数值<br/>
-            ✅ <strong>FAK / NOR 规则</strong>：POD 显示简洁标准名称 (Auckland, Lyttelton, Napier, Tauranga, Wellington)<br/>
-            ✅ <strong>NAC 规则</strong>：POD 显示特定长字符串<br/>
-            &nbsp;&nbsp;• 新西兰线: <code>Auckland;Tauranga;Lyttelton;Wellington</code><br/>
-            &nbsp;&nbsp;• 澳大利亚线: <code>Sydney, New South Wales, Australia;Melbourne, Victoria, Australia;Brisbane, Queensland, Australia</code><br/>
-            📌 每次刷新或点击下方按钮，都从您的表格获取最新价格，不使用任何演示数据。
+            🔄 <strong>数据源与计费逻辑</strong><br/>
+            ✅ <strong>OCEAN FREIGHT</strong> = 从您的 Google Sheets 读取 <strong>Total COST(USD)</strong> 列实时数值<br/>
+            ✅ <strong>FAK / NOR</strong> = OCEAN FREIGHT + Low Sulphur Fuel surcharge (FAF)<br/>
+            ✅ <strong>NAC</strong> = OCEAN FREIGHT + BAU<br/>
+            📌 POD 规则：FAK/NOR 显示简洁标准名；NAC 显示特定长字符串
         </div>
         <div style="margin-top: 16px; text-align: right;">
             <button id="refreshDataBtn" class="refresh-btn">🔄 手动刷新数据</button>
@@ -79,20 +79,16 @@
     // ============================================================
     const PUBLISHED_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRWHFiyl0LNCxQYO37cth1O_hBe8AMhxyr9m4X1OVpStWSrT2KRAvVw2xxP9ZICsZ6rbXy2FXyCIRHM/pub?gid=1264580367&single=true&output=csv";
     
-    // ========== 根据 RATE TYPE 定义的 POD 规则 ==========
-    // FAK / NOR 使用的简洁标准 POD
+    // ========== POD 规则定义 ==========
     const STANDARD_PODS_NZ_FAK_NOR = ["Auckland", "Lyttelton", "Napier", "Tauranga", "Wellington"];
-    // NAC 使用的特定字符串
     const NAC_PODS_NZ = "Auckland;Tauranga;Lyttelton;Wellington";
     const NAC_PODS_AU = "Sydney, New South Wales, Australia;Melbourne, Victoria, Australia;Brisbane, Queensland, Australia";
     
-    // 全局运价数据集 (从Sheet实时加载)
-    let freightData = [];        // 每条: { pol, podKey, containerType, totalCostUSD }
-    // podKey 用于匹配: 对于FAK/NOR存储标准名; 对于NAC存储原始长字符串
+    // 全局运价数据集
+    let freightData = [];
     let lastLoadTime = null;
-    let currentPODList = [];     // 当前显示的POD列表
     
-    // BUC & FAF 附加费数据
+    // FAF 和 BUC 月度数据 (Low Sulphur Fuel surcharge 和 BAU)
     const bucFafSource = {
         months: ["Dec","Jan","Feb","Mar","Apr","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
         rows: [
@@ -101,14 +97,13 @@
         ]
     };
     
-    const localFees = { doc: 90, dthc: 571, aklLevy: 140 };
-    
     function getCurrentMonth() {
         const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
         return months[new Date().getMonth()];
     }
     
-    function getValueByType(type, is40ft) {
+    // 获取 FAF 或 BAU 值 (根据柜型)
+    function getSurcharge(type, is40ft) {
         const targetRow = bucFafSource.rows.find(r => r.type === type);
         if (!targetRow) return 0;
         const currentMonth = getCurrentMonth();
@@ -117,30 +112,6 @@
         let value = targetRow.values[colIndex] || 0;
         if (is40ft) value = value * 2;
         return value;
-    }
-    
-    // 从Sheet数据中查找海运费 (根据当前RATE TYPE匹配对应的POD字符串)
-    function findOceanFreight(rateType, pol, selectedPodDisplay, ctnType) {
-        let targetPodKey = selectedPodDisplay;
-        
-        // 对于NAC，selectedPodDisplay 可能是长字符串，直接用它匹配
-        // 对于FAK/NOR，selectedPodDisplay 是标准名，需要匹配 freightData 中存储的 podKey
-        let match = freightData.find(item => 
-            item.pol === pol && 
-            item.podKey === targetPodKey && 
-            item.containerType === ctnType
-        );
-        
-        // 模糊匹配 (40GP 和 40HQ 可互换)
-        if (!match && (ctnType === "40HQ" || ctnType === "40GP")) {
-            match = freightData.find(item => 
-                item.pol === pol && 
-                item.podKey === targetPodKey && 
-                (item.containerType === "40GP" || item.containerType === "40HQ")
-            );
-        }
-        
-        return match ? match.totalCostUSD : null;
     }
     
     function parseCSVLine(line) {
@@ -157,7 +128,7 @@
         return result;
     }
     
-    // 核心：从Google Sheets读取实时数据（不使用任何演示数据，读取失败会报错）
+    // 核心：从Google Sheets读取实时数据
     async function loadRealTimeData() {
         const statusDiv = document.getElementById('statusMsg');
         const debugDiv = document.getElementById('debugInfo');
@@ -170,22 +141,20 @@
         try {
             const url = `${PUBLISHED_CSV_URL}&_t=${Date.now()}`;
             const response = await fetch(url, { cache: "no-store", mode: "cors" });
-            if (!response.ok) throw new Error(`HTTP ${response.status}: 无法读取Sheet。请确保链接可公开访问。`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}: 无法读取Sheet`);
             
             const csvText = await response.text();
             const lines = csvText.split(/\r?\n/).filter(l => l.trim().length > 0);
             if (lines.length < 2) throw new Error("CSV数据为空");
             
             const headers = parseCSVLine(lines[0]);
-            console.log("检测到列名:", headers);
             
             // 查找关键列索引
             const polIdx = headers.findIndex(h => h.toLowerCase().trim() === 'pol');
             const podIdx = headers.findIndex(h => h.toLowerCase().trim() === 'pod');
             const totalCostIdx = headers.findIndex(h => 
                 h.toLowerCase().includes('total cost') || 
-                h.toLowerCase().includes('total cost(usd)') || 
-                h.toLowerCase() === 'total cost'
+                h.toLowerCase().includes('total cost(usd)')
             );
             const containerIdx = headers.findIndex(h => 
                 h.toLowerCase().includes('container') || h.toLowerCase().includes('type')
@@ -197,7 +166,6 @@
             
             let newData = [];
             let polSet = new Set();
-            let rawPodSet = new Set();
             
             for (let i = 1; i < lines.length; i++) {
                 const cols = parseCSVLine(lines[i]);
@@ -217,52 +185,38 @@
                     else if (ct.includes("40GP") || ct.includes("40HC")) containerType = "40GP";
                 }
                 
-                // 存储原始POD作为匹配键（NAC时会用到）
-                // 同时，为了支持FAK/NOR，我们也需要知道这个原始POD属于哪个标准名
-                let podKey = rawPodVal;
-                
                 newData.push({ 
                     pol: polVal, 
-                    podKey: podKey,
-                    originalPod: rawPodVal,
+                    podRaw: rawPodVal,
                     containerType, 
-                    totalCostUSD: totalCostVal 
+                    oceanFreight: totalCostVal 
                 });
-                
                 polSet.add(polVal);
-                rawPodSet.add(rawPodVal);
             }
             
             if (newData.length === 0) {
-                throw new Error("未从Sheet读取到有效运价数据。请检查 POL, POD, Total COST(USD) 列是否有有效数值。");
+                throw new Error("未从Sheet读取到有效运价数据");
             }
             
             freightData = newData;
             lastLoadTime = new Date();
             
-            debugDiv.innerHTML = `✅ 加载成功！共 ${freightData.length} 条运价记录<br>
-                📅 最后更新: ${lastLoadTime.toLocaleString()}<br>
-                📍 发现 ${polSet.size} 个POL港口<br>
-                🎯 发现 ${rawPodSet.size} 个原始POD值（将按RATE TYPE规则筛选显示）`;
-            
-            statusDiv.innerHTML = `✅ 成功从 Google Sheets 加载实时数据！共 ${freightData.length} 条运价，包含 ${polSet.size} 个起运港 | 更新时间: ${lastLoadTime.toLocaleString()}`;
+            debugDiv.innerHTML = `✅ 加载成功！共 ${freightData.length} 条运价记录<br>📅 最后更新: ${lastLoadTime.toLocaleString()}<br>📍 发现 ${polSet.size} 个POL港口`;
+            statusDiv.innerHTML = `✅ 成功加载实时数据！共 ${freightData.length} 条运价 | 更新时间: ${lastLoadTime.toLocaleString()}`;
             statusDiv.className = "status status-success";
-            badge.innerHTML = `✅ 实时数据 ${freightData.length} 条`;
+            badge.innerHTML = `✅ 实时数据`;
             
             // 刷新POL下拉框
             rebuildPolOptions();
-            // 根据当前RATE TYPE更新POD列表
+            // 根据RATE TYPE更新POD列表
             updatePodListByRateType();
-            generateQuote();
             
         } catch (err) {
-            console.error("加载失败:", err);
-            // 不使用演示数据，直接显示错误
-            statusDiv.innerHTML = `⚠️ 读取Sheet失败: ${err.message}<br><br>请检查：<br>1. 链接是否可公开访问（在浏览器中打开测试）<br>2. 表格是否包含列: POL, POD, Total COST(USD)<br>3. 这些列中是否有有效数据`;
+            console.error(err);
+            statusDiv.innerHTML = `⚠️ 读取Sheet失败: ${err.message}<br><br>请检查：<br>1. 链接是否可公开访问<br>2. 表格是否包含列: POL, POD, Total COST(USD)`;
             statusDiv.className = "status status-error";
-            debugDiv.innerHTML = `错误详情: ${err.message}<br>期望列名: POL, POD, Total COST(USD)`;
+            debugDiv.innerHTML = `错误: ${err.message}`;
             badge.innerHTML = "⚠️ 连接失败";
-            freightData = []; // 清空数据，避免使用旧数据
         }
     }
     
@@ -277,20 +231,17 @@
         });
     }
     
-    // 根据当前选中的 RATE TYPE 更新 POD 下拉列表
+    // 根据 RATE TYPE 更新 POD 下拉列表
     function updatePodListByRateType() {
         const rateType = document.getElementById('rateType').value;
         let podOptions = [];
         
         if (rateType === "NAC") {
-            // NAC 显示两个特定长字符串选项
             podOptions = [NAC_PODS_NZ, NAC_PODS_AU];
         } else {
-            // FAK 或 NOR 显示简洁标准新西兰港口
             podOptions = [...STANDARD_PODS_NZ_FAK_NOR];
         }
         
-        currentPODList = podOptions;
         const podSelect = document.getElementById('pod');
         podSelect.innerHTML = '<option value="">-- 选择POD --</option>';
         podOptions.forEach(pod => {
@@ -298,9 +249,47 @@
         });
     }
     
-    // 当POL变化时，不需要改变POD列表（因为POD列表由RATE TYPE决定），但需要重新生成报价
-    function onPolChange() {
-        generateQuote();
+    // 查找 OCEAN FREIGHT (从Sheet数据中匹配)
+    function findOceanFreight(rateType, pol, selectedPod, ctnType) {
+        if (rateType === "NAC") {
+            // NAC: 直接匹配 podRaw 等于长字符串
+            const match = freightData.find(item => 
+                item.pol === pol && 
+                item.podRaw === selectedPod && 
+                item.containerType === ctnType
+            );
+            if (match) return match.oceanFreight;
+            
+            // 尝试 40GP/40HQ 互换
+            if (ctnType === "40HQ" || ctnType === "40GP") {
+                const altMatch = freightData.find(item => 
+                    item.pol === pol && 
+                    item.podRaw === selectedPod && 
+                    (item.containerType === "40GP" || item.containerType === "40HQ")
+                );
+                if (altMatch) return altMatch.oceanFreight;
+            }
+            return null;
+        } else {
+            // FAK/NOR: 匹配 podRaw 包含标准名
+            const match = freightData.find(item => 
+                item.pol === pol && 
+                item.containerType === ctnType &&
+                item.podRaw?.toLowerCase().includes(selectedPod.toLowerCase())
+            );
+            if (match) return match.oceanFreight;
+            
+            // 尝试 40GP/40HQ 互换
+            if (ctnType === "40HQ" || ctnType === "40GP") {
+                const altMatch = freightData.find(item => 
+                    item.pol === pol && 
+                    (item.containerType === "40GP" || item.containerType === "40HQ") &&
+                    item.podRaw?.toLowerCase().includes(selectedPod.toLowerCase())
+                );
+                if (altMatch) return altMatch.oceanFreight;
+            }
+            return null;
+        }
     }
     
     function generateQuote() {
@@ -308,7 +297,6 @@
         const carrier = document.getElementById('carrier').value.trim() || "COSCO";
         const pol = document.getElementById('pol').value;
         const pod = document.getElementById('pod').value;
-        const tt = document.getElementById('tt').value || "22";
         const ctnType = document.getElementById('ctnType').value;
         
         if (!pol || !pod) {
@@ -323,93 +311,66 @@
         
         const is40ft = ctnType.includes("40");
         
-        // 查找海运费：需要匹配 freightData 中的 podKey
-        // 对于 NAC，pod 本身就是长字符串，直接匹配
-        // 对于 FAK/NOR，pod 是标准名，需要找到 freightData 中原始POD包含该标准名的条目
-        let oceanFreight = null;
-        
-        if (rateType === "NAC") {
-            // NAC: 直接匹配 pod 长字符串
-            oceanFreight = findOceanFreight(rateType, pol, pod, ctnType);
-        } else {
-            // FAK/NOR: 需要匹配包含标准名的原始POD
-            // 遍历 freightData，找到 pol 匹配且原始POD包含当前标准名的第一条记录
-            const matchingItem = freightData.find(item => 
-                item.pol === pol && 
-                item.containerType === ctnType &&
-                STANDARD_PODS_NZ_FAK_NOR.some(standard => item.originalPod?.toLowerCase().includes(standard.toLowerCase()))
-            );
-            if (matchingItem) {
-                oceanFreight = matchingItem.totalCostUSD;
-            }
-            
-            // 如果没找到，再尝试 40GP/40HQ 互换匹配
-            if (!oceanFreight && (ctnType === "40HQ" || ctnType === "40GP")) {
-                const altItem = freightData.find(item => 
-                    item.pol === pol && 
-                    (item.containerType === "40GP" || item.containerType === "40HQ") &&
-                    STANDARD_PODS_NZ_FAK_NOR.some(standard => item.originalPod?.toLowerCase().includes(standard.toLowerCase()))
-                );
-                if (altItem) oceanFreight = altItem.totalCostUSD;
-            }
-        }
+        // 获取 OCEAN FREIGHT (Total COST)
+        const oceanFreight = findOceanFreight(rateType, pol, pod, ctnType);
         
         if (oceanFreight === null || oceanFreight === undefined) {
-            document.getElementById('resultArea').innerHTML = `<div style="background:#fee;padding:16px;border-radius:16px;color:#b91c1c;">❌ 未找到匹配运价<br/>RATE TYPE: ${rateType} | POL: ${pol} | POD: ${pod} | 柜型: ${ctnType}<br/><br/>请检查Google Sheets中是否有对应组合的 Total COST(USD) 数据。</div>`;
+            document.getElementById('resultArea').innerHTML = `<div style="background:#fee;padding:16px;border-radius:16px;color:#b91c1c;">❌ 未找到匹配运价<br/>RATE TYPE: ${rateType} | POL: ${pol} | POD: ${pod} | 柜型: ${ctnType}</div>`;
             return;
         }
         
-        let bau = 0, faf = 0;
-        let validity = "";
-        if (rateType === "NAC") { 
-            bau = getValueByType("BUC", is40ft); 
-            faf = 0;
-            validity = `NAC = 海运费(${oceanFreight}) + BAU(${bau})`;
-        } else { 
-            bau = 0; 
-            faf = getValueByType("FAF", is40ft);
-            validity = `${rateType} = 海运费(${oceanFreight}) + FAF(${faf})`;
+        let surcharge = 0;
+        let surchargeName = "";
+        
+        if (rateType === "NAC") {
+            surcharge = getSurcharge("BUC", is40ft);
+            surchargeName = "BAU";
+        } else {
+            surcharge = getSurcharge("FAF", is40ft);
+            surchargeName = "Low Sulphur Fuel surcharge (FAF)";
         }
         
-        const totalUSD = oceanFreight + bau + faf;
+        const totalUSD = oceanFreight + surcharge;
         
         const html = `
             <table class="quote-table">
                 <thead>
-                    <tr><th>RATE TYPE</th><th>CARRIER</th><th>POL</th><th>POD</th><th>T/T</th><th>CTN</th><th>Currency</th>
-                    <th>海运费<br>(Total COST)</th><th>FAF</th><th>BAU</th><th>TOTAL USD</th>
-                    <th>DOC</th><th>DTHC</th><th>AKL LEVY</th><th>VALIDITY</th></tr>
+                    <tr>
+                        <th>RATE TYPE</th>
+                        <th>CARRIER</th>
+                        <th>POL</th>
+                        <th>POD</th>
+                        <th>CONTAINER TYPE</th>
+                        <th>Currency</th>
+                        <th>OCEAN FREIGHT<br><span style="font-weight:normal;">(Total COST)</span></th>
+                        <th>${surchargeName}</th>
+                        <th>TOTAL USD</th>
+                    </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td>${rateType}</td>
                         <td>${carrier}</td>
                         <td>${pol}</td>
-                        <td><strong>${pod}</strong></td>
-                        <td>${tt}</td>
+                        <td>${pod}</td>
                         <td>${ctnType}</td>
                         <td>USD</td>
-                        <td><strong style="color:#1e5a5b;">${oceanFreight.toFixed(2)}</strong></td>
-                        <td>${faf.toFixed(2)}</td>
-                        <td>${bau.toFixed(2)}</td>
+                        <td><strong style="color:#1e5a5b; font-size:16px;">${oceanFreight.toFixed(2)}</strong></td>
+                        <td>${surcharge.toFixed(2)}</td>
                         <td class="total-cost"><strong>${totalUSD.toFixed(2)}</strong></td>
-                        <td>${localFees.doc}</td>
-                        <td>${localFees.dthc}</td>
-                        <td>${localFees.aklLevy}</td>
-                        <td>${validity}</td>
                     </tr>
                 </tbody>
             </table>
-            <div style="font-size:12px; margin-top:12px; padding:8px; background:#f0f6f7; border-radius:12px;">
-                📌 海运费 = 表格中的 <strong>Total COST(USD)</strong> 列实时数值 (读取时间: ${lastLoadTime ? lastLoadTime.toLocaleTimeString() : '刚刚'})<br>
-                🔗 数据源: ${PUBLISHED_CSV_URL.substring(0, 80)}...
+            <div style="font-size:12px; margin-top:16px; padding:10px; background:#f0f6f7; border-radius:12px;">
+                📌 OCEAN FREIGHT = 表格中的 <strong>Total COST(USD)</strong> 列实时数值<br>
+                📌 ${surchargeName} = 月度动态值 × ${is40ft ? '2 (40尺倍数)' : '1 (20尺倍数)'}<br>
+                📅 数据读取时间: ${lastLoadTime ? lastLoadTime.toLocaleString() : '刚刚'}
             </div>
         `;
         
         document.getElementById('resultArea').innerHTML = html;
-        const statusDiv = document.getElementById('statusMsg');
-        statusDiv.innerHTML = `💰 报价已生成 | 海运费: ${oceanFreight} USD | 总计: ${totalUSD.toFixed(2)} USD`;
-        statusDiv.className = "status status-success";
+        document.getElementById('statusMsg').innerHTML = `💰 报价已生成 | OCEAN FREIGHT: ${oceanFreight} USD | TOTAL: ${totalUSD.toFixed(2)} USD`;
+        document.getElementById('statusMsg').className = "status status-success";
     }
     
     // 事件绑定
@@ -422,13 +383,10 @@
             updatePodListByRateType();
             generateQuote();
         });
-        document.getElementById('pol').addEventListener('change', () => {
-            generateQuote();
-        });
+        document.getElementById('pol').addEventListener('change', () => generateQuote());
         document.getElementById('pod').addEventListener('change', () => generateQuote());
         document.getElementById('ctnType').addEventListener('change', () => generateQuote());
         document.getElementById('carrier').addEventListener('input', () => generateQuote());
-        document.getElementById('tt').addEventListener('input', () => generateQuote());
     });
 </script>
 </body>
