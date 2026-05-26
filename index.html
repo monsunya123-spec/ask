@@ -2,468 +2,242 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Freight Quote Tool</title>
-
   <style>
-    body{
-      font-family: Arial, sans-serif;
-      background:#f4f6f9;
-      padding:30px;
-    }
-
-    .container{
-      max-width:900px;
-      margin:auto;
-      background:#fff;
-      padding:30px;
-      border-radius:12px;
-      box-shadow:0 2px 10px rgba(0,0,0,0.1);
-    }
-
-    h1{
-      margin-bottom:25px;
-      color:#003366;
-    }
-
-    .grid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:20px;
-    }
-
-    label{
-      font-weight:bold;
-      display:block;
-      margin-bottom:8px;
-    }
-
-    select{
-      width:100%;
-      padding:10px;
-      border:1px solid #ccc;
-      border-radius:6px;
-      font-size:14px;
-    }
-
-    button{
-      margin-top:30px;
-      width:100%;
-      padding:14px;
-      background:#003366;
-      color:white;
-      border:none;
-      border-radius:8px;
-      font-size:16px;
-      cursor:pointer;
-    }
-
-    button:hover{
-      background:#004a99;
-    }
-
-    .result{
-      margin-top:30px;
-      background:#eef4ff;
-      padding:20px;
-      border-radius:10px;
-      display:none;
-    }
-
-    .result-row{
-      display:flex;
-      justify-content:space-between;
-      margin:10px 0;
-      font-size:16px;
-    }
-
-    .total{
-      margin-top:15px;
-      padding-top:15px;
-      border-top:1px solid #ccc;
-      font-size:22px;
-      font-weight:bold;
-    }
-
-    @media(max-width:768px){
-      .grid{
-        grid-template-columns:1fr;
-      }
-    }
-
+    body { font-family: Arial, sans-serif; background:#f4f6f9; padding:30px; }
+    .container { max-width:900px; margin:auto; background:white; padding:30px; border-radius:12px; }
+    label { display:block; margin-top:16px; font-weight:bold; }
+    select, button { width:100%; padding:10px; margin-top:6px; }
+    button { margin-top:24px; background:#003366; color:white; border:none; border-radius:8px; cursor:pointer; }
+    .result { display:none; margin-top:24px; background:#eef4ff; padding:20px; border-radius:10px; }
+    .row { display:flex; justify-content:space-between; margin:10px 0; }
+    .total { border-top:1px solid #ccc; padding-top:12px; font-size:20px; font-weight:bold; }
   </style>
 </head>
 
 <body>
-
 <div class="container">
-
   <h1>Freight Quote Tool</h1>
 
-  <div class="grid">
+  <label>FAK / NAC</label>
+  <select id="rateType"></select>
 
-    <div>
-      <label>Rate Type</label>
-      <select id="rateType"></select>
-    </div>
+  <label>POL</label>
+  <select id="pol"></select>
 
-    <div>
-      <label>POL</label>
-      <select id="pol"></select>
-    </div>
+  <label>POD</label>
+  <select id="pod"></select>
 
-    <div>
-      <label>POD</label>
-      <select id="pod"></select>
-    </div>
+  <label>Container Type</label>
+  <select id="containerType"></select>
 
-    <div>
-      <label>Container Type</label>
-      <select id="containerType">
-        <option value="">Please select</option>
-
-        <!-- 6个独立字段 -->
-        <option value="Rate 20">Rate 20</option>
-        <option value="Rate 40">Rate 40</option>
-        <option value="Rate 40H">Rate 40H</option>
-
-        <option value="20GP">20GP</option>
-        <option value="40GP">40GP</option>
-        <option value="40HQ">40HQ</option>
-      </select>
-    </div>
-
-  </div>
-
-  <button onclick="calculateQuote()">
-    Calculate Quote
-  </button>
+  <button onclick="calculateQuote()">Calculate Quote</button>
 
   <div id="result" class="result"></div>
-
 </div>
 
 <script>
-
-const CSV_URL =
-"https://docs.google.com/spreadsheets/d/e/2PACX-1vT_rkgXWvqJu9uRWkyHXLMoGXe1Y1A2pbNvpZ52xU9xr0UE7GsDNSvKXvck8Zk-CRvt7Ys1nClO96tI/pub?output=csv";
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_rkgXWvqJu9uRWkyHXLMoGXe1Y1A2pbNvpZ52xU9xr0UE7GsDNSvKXvck8Zk-CRvt7Ys1nClO96tI/pub?output=csv";
 
 let allRows = [];
 
+function parseCSV(text) {
+  const rows = [];
+  let current = [];
+  let value = "";
+  let inQuotes = false;
 
-/* =========================
-   CSV PARSER
-========================= */
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const next = text[i + 1];
 
-function parseCSV(text){
+    if (char === '"' && inQuotes && next === '"') {
+      value += '"';
+      i++;
+    } else if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === "," && !inQuotes) {
+      current.push(value.trim());
+      value = "";
+    } else if ((char === "\n" || char === "\r") && !inQuotes) {
+      if (value || current.length) {
+        current.push(value.trim());
+        rows.push(current);
+        current = [];
+        value = "";
+      }
+      if (char === "\r" && next === "\n") i++;
+    } else {
+      value += char;
+    }
+  }
 
-  const lines = text.trim().split(/\r?\n/);
+  if (value || current.length) {
+    current.push(value.trim());
+    rows.push(current);
+  }
 
-  const headers = lines[0]
-    .split(",")
-    .map(h => h.trim());
+  const headers = rows[0].map(h => h.trim());
 
-  return lines.slice(1).map(line => {
-
-    const values =
-      line.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || [];
-
-    let row = {};
-
-    headers.forEach((h,i)=>{
-      row[h] = values[i]
-        ? values[i].replace(/^"|"$/g,"").trim()
-        : "";
-    });
-
-    return row;
-
+  return rows.slice(1).map(r => {
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = r[i] ? r[i].trim() : "");
+    return obj;
   });
-
 }
 
+function getCol(row, names) {
+  for (const name of names) {
+    if (row[name] !== undefined) return row[name];
+  }
+  return "";
+}
 
-/* =========================
-   HELPER
-========================= */
-
-function unique(arr){
+function unique(arr) {
   return [...new Set(arr.filter(Boolean))];
 }
 
-function fillSelect(id, values){
-
+function fillSelect(id, values) {
   const select = document.getElementById(id);
+  select.innerHTML = `<option value="">Please select</option>`;
 
-  select.innerHTML =
-    `<option value="">Please select</option>`;
-
-  values.forEach(v=>{
-
+  values.forEach(v => {
     const option = document.createElement("option");
-
     option.value = v;
     option.textContent = v;
-
     select.appendChild(option);
-
   });
-
 }
 
-
-function getCol(row, names){
-
-  for(let n of names){
-
-    if(row[n] !== undefined){
-      return row[n];
-    }
-
-  }
-
-  return "";
-
+function num(v) {
+  if (!v) return 0;
+  return Number(String(v).replace(/[^0-9.-]/g, "")) || 0;
 }
 
-
-function num(v){
-
-  if(!v) return 0;
-
-  return Number(
-    String(v).replace(/[^0-9.-]/g,"")
-  ) || 0;
-
-}
-
-
-/* =========================
-   LOAD DATA
-========================= */
-
-async function loadData(){
-
-  const response = await fetch(CSV_URL);
-
-  const text = await response.text();
+async function loadData() {
+  const res = await fetch(CSV_URL);
+  const text = await res.text();
 
   allRows = parseCSV(text);
 
+  fillSelect("rateType", unique(allRows.map(r =>
+    getCol(r, ["FAK/NAC", "FAK/NAC/NOR", "Rate Type", "TYPE", "Type"])
+  )));
 
-  // RATE TYPE
-  const rateTypes = unique(
-    allRows.map(r =>
-      getCol(r,[
-        "FAK/NAC/NOR",
-        "Rate Type",
-        "TYPE",
-        "Type"
-      ])
-    )
-  );
-
-  // POL
-  const pols = unique(
-    allRows.map(r =>
-      getCol(r,[
-        "POL",
-        "Port of Loading"
-      ])
-    )
-  );
-
-  fillSelect("rateType", rateTypes);
-  fillSelect("pol", pols);
-
+  updatePOL();
 }
 
+function updatePOL() {
+  const rateType = document.getElementById("rateType").value;
 
-/* =========================
-   POD DROPDOWN
-========================= */
-
-function updatePods(){
-
-  const rateType =
-    document.getElementById("rateType").value;
-
-  const pol =
-    document.getElementById("pol").value;
-
-
-  let filtered = allRows.filter(r => {
-
-    const rowRate =
-      getCol(r,[
-        "FAK/NAC/NOR",
-        "Rate Type",
-        "TYPE",
-        "Type"
-      ]);
-
-    const rowPol =
-      getCol(r,[
-        "POL",
-        "Port of Loading"
-      ]);
-
-    return (
-      (!rateType || rowRate === rateType)
-      &&
-      (!pol || rowPol === pol)
-    );
-
+  const filtered = allRows.filter(r => {
+    const rowRate = getCol(r, ["FAK/NAC", "FAK/NAC/NOR", "Rate Type", "TYPE", "Type"]);
+    return !rateType || rowRate === rateType;
   });
 
+  fillSelect("pol", unique(filtered.map(r =>
+    getCol(r, ["POL", "Port of Loading"])
+  )));
 
-  const pods = unique(
-    filtered.map(r =>
-      getCol(r,[
-        "POD",
-        "Port of Discharge"
-      ])
-    )
-  );
-
-  fillSelect("pod", pods);
-
+  updatePOD();
 }
 
+function updatePOD() {
+  const rateType = document.getElementById("rateType").value;
+  const pol = document.getElementById("pol").value;
 
-/* =========================
-   CALCULATE
-========================= */
+  const filtered = allRows.filter(r => {
+    const rowRate = getCol(r, ["FAK/NAC", "FAK/NAC/NOR", "Rate Type", "TYPE", "Type"]);
+    const rowPol = getCol(r, ["POL", "Port of Loading"]);
 
-function calculateQuote(){
+    return (!rateType || rowRate === rateType) &&
+           (!pol || rowPol === pol);
+  });
 
-  const rateType =
-    document.getElementById("rateType").value;
+  fillSelect("pod", unique(filtered.map(r =>
+    getCol(r, ["POD", "Port of Discharge"])
+  )));
 
-  const pol =
-    document.getElementById("pol").value;
+  updateContainerType();
+}
 
-  const pod =
-    document.getElementById("pod").value;
+function updateContainerType() {
+  const rateType = document.getElementById("rateType").value;
+  const pol = document.getElementById("pol").value;
+  const pod = document.getElementById("pod").value;
 
-  const containerType =
-    document.getElementById("containerType").value;
+  const filtered = allRows.filter(r => {
+    const rowRate = getCol(r, ["FAK/NAC", "FAK/NAC/NOR", "Rate Type", "TYPE", "Type"]);
+    const rowPol = getCol(r, ["POL", "Port of Loading"]);
+    const rowPod = getCol(r, ["POD", "Port of Discharge"]);
 
+    return (!rateType || rowRate === rateType) &&
+           (!pol || rowPol === pol) &&
+           (!pod || rowPod === pod);
+  });
+
+  fillSelect("containerType", unique(filtered.map(r =>
+    getCol(r, ["CONTAINER TYPE", "Container Type"])
+  )));
+}
+
+function calculateQuote() {
+  const rateType = document.getElementById("rateType").value;
+  const pol = document.getElementById("pol").value;
+  const pod = document.getElementById("pod").value;
+  const containerType = document.getElementById("containerType").value;
 
   const matched = allRows.find(r => {
+    const rowRate = getCol(r, ["FAK/NAC", "FAK/NAC/NOR", "Rate Type", "TYPE", "Type"]);
+    const rowPol = getCol(r, ["POL", "Port of Loading"]);
+    const rowPod = getCol(r, ["POD", "Port of Discharge"]);
+    const rowContainer = getCol(r, ["CONTAINER TYPE", "Container Type"]);
 
-    const rowRate =
-      getCol(r,[
-        "FAK/NAC/NOR",
-        "Rate Type",
-        "TYPE",
-        "Type"
-      ]);
-
-    const rowPol =
-      getCol(r,[
-        "POL",
-        "Port of Loading"
-      ]);
-
-    const rowPod =
-      getCol(r,[
-        "POD",
-        "Port of Discharge"
-      ]);
-
-    return (
-      rowRate === rateType
-      &&
-      rowPol === pol
-      &&
-      rowPod === pod
-    );
-
+    return rowRate === rateType &&
+           rowPol === pol &&
+           rowPod === pod &&
+           rowContainer === containerType;
   });
 
+  const result = document.getElementById("result");
 
-  const resultDiv =
-    document.getElementById("result");
-
-
-  if(!matched){
-
-    resultDiv.style.display = "block";
-
-    resultDiv.innerHTML =
-      "<strong>No matching quote found.</strong>";
-
+  if (!matched) {
+    result.style.display = "block";
+    result.innerHTML = "<strong>No matching quote found.</strong>";
     return;
-
   }
 
+  const ocean = num(getCol(matched, ["OCEAN FREIGHT"]));
+  const faf = num(getCol(matched, ["Low Sulphur Fuel surcharge (FAF)", "FAF"]));
+  const bau = num(getCol(matched, ["BAU"]));
+  const total = num(getCol(matched, ["Total COST(USD)", "TOTAL COST", "Total Cost"]));
 
-  // 直接读取对应柜型字段
-  const oceanFreight =
-    num(matched[containerType]);
-
-  const bau =
-    num(getCol(matched,["BAU"]));
-
-  const faf =
-    num(getCol(matched,["FAF"]));
-
-  const total =
-    oceanFreight + bau + faf;
-
-
-  resultDiv.style.display = "block";
-
-  resultDiv.innerHTML = `
-
+  result.style.display = "block";
+  result.innerHTML = `
     <h2>Quote Result</h2>
 
-    <div class="result-row">
-      <span>OCEAN FREIGHT</span>
-      <strong>${oceanFreight.toFixed(2)}</strong>
-    </div>
+    <div class="row"><span>FAK / NAC</span><strong>${getCol(matched, ["FAK/NAC"])}</strong></div>
+    <div class="row"><span>Carrier</span><strong>${getCol(matched, ["CARRIER"])}</strong></div>
+    <div class="row"><span>Line</span><strong>${getCol(matched, ["Line"])}</strong></div>
+    <div class="row"><span>POL</span><strong>${getCol(matched, ["POL"])}</strong></div>
+    <div class="row"><span>POD</span><strong>${getCol(matched, ["POD"])}</strong></div>
+    <div class="row"><span>Container Type</span><strong>${getCol(matched, ["CONTAINER TYPE", "Container Type"])}</strong></div>
 
-    <div class="result-row">
-      <span>BAU</span>
-      <strong>${bau.toFixed(2)}</strong>
-    </div>
+    <hr>
 
-    <div class="result-row">
-      <span>FAF</span>
-      <strong>${faf.toFixed(2)}</strong>
-    </div>
+    <div class="row"><span>OCEAN FREIGHT</span><strong>USD ${ocean.toFixed(2)}</strong></div>
+    <div class="row"><span>FAF</span><strong>USD ${faf.toFixed(2)}</strong></div>
+    <div class="row"><span>BAU</span><strong>USD ${bau.toFixed(2)}</strong></div>
 
-    <div class="result-row total">
-      <span>TOTAL COST</span>
-      <strong>${total.toFixed(2)}</strong>
-    </div>
-
+    <div class="row total"><span>TOTAL COST</span><strong>USD ${total.toFixed(2)}</strong></div>
   `;
-
 }
 
-
-/* =========================
-   EVENTS
-========================= */
-
-document
-.getElementById("rateType")
-.addEventListener("change", updatePods);
-
-document
-.getElementById("pol")
-.addEventListener("change", updatePods);
-
-
-/* =========================
-   INIT
-========================= */
+document.getElementById("rateType").addEventListener("change", updatePOL);
+document.getElementById("pol").addEventListener("change", updatePOD);
+document.getElementById("pod").addEventListener("change", updateContainerType);
 
 loadData();
-
 </script>
-
 </body>
 </html>
