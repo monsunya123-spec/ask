@@ -79,52 +79,39 @@
     // 您的 CSV 发布链接
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_rkgXWvqJu9uRWkyHXLMoGXe1Y1A2pbNvpZ52xU9xr0UE7GsDNSvKXvck8Zk-CRvt7Ys1nClO96tI/pub?output=csv";
     
-    // 使用代理避免跨域
-    const PROXY = "https://api.allorigins.win/raw?url=";
+    // 使用更稳定的代理服务
+    const PROXY = "https://corsproxy.io/?";
     
     // NAC 长字符串配置
     const NAC_PODS_NZ = "Auckland;Tauranga;Lyttelton;Wellington";
     const NAC_PODS_AU = "Sydney, New South Wales, Australia;Melbourne, Victoria, Australia;Brisbane, Queensland, Australia";
     
-    // 柜型映射：下拉选项的值 -> 表格中的柜型
-    const CTN_MAP = {
-        "20GP": "20GP",
-        "40HQ": "40HQ",
-        "40GP": "40GP"
-    };
+    let allRows = [];
+    let polList = [];
+    let podMap = new Map();
     
-    let allRows = [];           // 存储所有原始行
-    let polList = [];           // 所有POL
-    let podMap = new Map();     // POL -> 该POL下的所有POD（实际表格中的POD）
-    
-    // 解析CSV行
     function parseCSVLine(line) {
         const result = [];
         let inQuote = false;
         let current = '';
         for (let i = 0; i < line.length; i++) {
             const ch = line[i];
-            if (ch === '"') {
-                inQuote = !inQuote;
-            } else if (ch === ',' && !inQuote) {
-                result.push(current.trim());
-                current = '';
-            } else {
-                current += ch;
-            }
+            if (ch === '"') inQuote = !inQuote;
+            else if (ch === ',' && !inQuote) { result.push(current.trim()); current = ''; }
+            else current += ch;
         }
         result.push(current.trim());
         return result;
     }
     
-    // 加载数据
     async function loadData() {
         const resultDiv = document.getElementById('resultArea');
         resultDiv.innerHTML = '<div class="status">⏳ 正在读取 Google Sheets 数据...</div>';
         
         try {
-            const response = await fetch(PROXY + encodeURIComponent(CSV_URL), { cache: 'no-store' });
-            if (!response.ok) throw new Error('网络请求失败');
+            const url = PROXY + encodeURIComponent(CSV_URL);
+            const response = await fetch(url, { cache: 'no-store' });
+            if (!response.ok) throw new Error('HTTP ' + response.status);
             
             const csvText = await response.text();
             const lines = csvText.split(/\r?\n/).filter(l => l.trim().length > 0);
@@ -136,15 +123,13 @@
                 const cols = parseCSVLine(lines[i]);
                 if (cols.length < 11) continue;
                 
-                const pol = cols[3]?.trim();           // D列
-                const pod = cols[4]?.trim();           // E列
-                const ocean = parseFloat(cols[5]?.replace(/[^0-9.-]/g, '')) || 0;   // F列
-                const feeI = parseFloat(cols[8]?.replace(/[^0-9.-]/g, '')) || 0;     // I列
-                const feeJ = parseFloat(cols[9]?.replace(/[^0-9.-]/g, '')) || 0;     // J列 (FAF)
-                const feeK = parseFloat(cols[10]?.replace(/[^0-9.-]/g, '')) || 0;    // K列 (BAU)
-                const containerRaw = cols[6]?.trim().toUpperCase() || '';            // G列柜型
+                const pol = cols[3]?.trim();
+                const pod = cols[4]?.trim();
+                const ocean = parseFloat(cols[5]?.replace(/[^0-9.-]/g, '')) || 0;
+                const feeJ = parseFloat(cols[9]?.replace(/[^0-9.-]/g, '')) || 0;
+                const feeK = parseFloat(cols[10]?.replace(/[^0-9.-]/g, '')) || 0;
+                const containerRaw = cols[6]?.trim().toUpperCase() || '';
                 
-                // 柜型识别
                 let ctnType = '';
                 if (containerRaw.includes('20')) ctnType = '20GP';
                 else if (containerRaw.includes('40HQ') || containerRaw === '40H') ctnType = '40HQ';
@@ -153,21 +138,13 @@
                 
                 if (!pol || !pod) continue;
                 
-                rows.push({
-                    pol: pol,
-                    pod: pod,
-                    ctnType: ctnType,
-                    ocean: ocean,
-                    faf: feeJ,      // J列 = FAF
-                    bau: feeK       // K列 = BAU
-                });
+                rows.push({ pol, pod, ctnType, ocean, faf: feeJ, bau: feeK });
             }
             
             if (rows.length === 0) throw new Error('未提取到有效数据');
             
             allRows = rows;
             
-            // 构建 POL 列表和 POD 映射
             const polSet = new Set();
             const tempPodMap = new Map();
             for (const row of rows) {
@@ -181,7 +158,6 @@
                 podMap.set(pol, Array.from(podSet).sort());
             }
             
-            // 更新POL下拉框
             const polSelect = document.getElementById('polSelect');
             polSelect.innerHTML = '<option value="">-- 请选择POL --</option>';
             for (const pol of polList) {
@@ -192,24 +168,21 @@
             
         } catch (err) {
             console.error(err);
-            resultDiv.innerHTML = `<div class="status error">❌ 加载失败: ${err.message}<br>请检查网络或刷新重试</div>`;
+            resultDiv.innerHTML = `<div class="status error">❌ 加载失败: ${err.message}<br>请点击"刷新数据"重试</div>`;
         }
     }
     
-    // 根据 RATE TYPE 更新 POD 下拉框
     function updatePodByRateType() {
         const rateType = document.getElementById('rateTypeSelect').value;
         const pol = document.getElementById('polSelect').value;
         const podSelect = document.getElementById('podSelect');
         
         if (rateType === 'NAC') {
-            // NAC 模式：显示两个特殊长字符串
             podSelect.innerHTML = `
                 <option value="${NAC_PODS_NZ}">${NAC_PODS_NZ}</option>
                 <option value="${NAC_PODS_AU}">${NAC_PODS_AU}</option>
             `;
         } else {
-            // FAK/NOR 模式：显示实际表格中的 POD
             if (!pol || !podMap.has(pol)) {
                 podSelect.innerHTML = '<option value="">-- 请先选择POL --</option>';
                 return;
@@ -222,15 +195,11 @@
         }
     }
     
-    // POL变化时更新POD（仅 FAK/NOR 模式）
     function onPolChange() {
         const rateType = document.getElementById('rateTypeSelect').value;
-        if (rateType !== 'NAC') {
-            updatePodByRateType();
-        }
+        if (rateType !== 'NAC') updatePodByRateType();
     }
     
-    // 查询并显示结果
     function search() {
         const rateType = document.getElementById('rateTypeSelect').value;
         const pol = document.getElementById('polSelect').value;
@@ -243,82 +212,47 @@
             return;
         }
         
-        // 柜型映射：下拉选项的值 -> 表格柜型
         let targetCtn = '';
         if (ctnOption === '20GP') targetCtn = '20GP';
         else if (ctnOption === '40HQ') targetCtn = '40HQ';
         else if (ctnOption === '40GP') targetCtn = '40GP';
-        else {
-            resultDiv.innerHTML = '<div class="status error">❌ 无效的柜型选项</div>';
-            return;
-        }
         
-        // NAC 模式：长字符串需要拆解，匹配第一个实际港口
         let actualPod = pod;
         if (rateType === 'NAC') {
             if (pod === NAC_PODS_NZ) actualPod = 'Auckland';
             else if (pod === NAC_PODS_AU) actualPod = 'Sydney';
         }
         
-        // 查找匹配的行
         const matched = allRows.find(row => 
-            row.pol === pol && 
-            row.pod === actualPod && 
-            row.ctnType === targetCtn
+            row.pol === pol && row.pod === actualPod && row.ctnType === targetCtn
         );
         
         if (!matched) {
-            resultDiv.innerHTML = `
-                <div class="status error">❌ 未找到匹配数据</div>
-                <table>
-                    <thead><tr><th>POL</th><th>POD</th><th>柜型</th><th>状态</th></tr></thead>
-                    <tbody><tr><td>${pol}</td><td>${pod}</td><td>${ctnOption}</td><td>无此组合</td></tr></tbody>
-                </table>
-            `;
+            resultDiv.innerHTML = `<div class="status error">❌ 未找到匹配数据<br>POL: ${pol} | POD: ${pod} | 柜型: ${ctnOption}</div>`;
             return;
         }
         
-        // 显示结果（只展示原始值，无 TOTAL USD）
         resultDiv.innerHTML = `
             <table>
-                <thead>
-                    <tr>
-                        <th>POL</th>
-                        <th>POD</th>
-                        <th>CONTAINER TYPE</th>
-                        <th>OCEAN FREIGHT</th>
-                        <th>FAF</th>
-                        <th>BAU</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>${matched.pol}</td>
-                        <td>${pod}</td>
-                        <td>${ctnOption}</td>
-                        <td class="value">${matched.ocean.toFixed(2)}</td>
-                        <td class="value">${matched.faf.toFixed(2)}</td>
-                        <td class="value">${matched.bau.toFixed(2)}</td>
-                    </tr>
-                </tbody>
+                <thead><tr><th>POL</th><th>POD</th><th>CONTAINER TYPE</th><th>OCEAN FREIGHT</th><th>FAF</th><th>BAU</th></tr></thead>
+                <tbody><tr>
+                    <td>${matched.pol}</td>
+                    <td>${pod}</td>
+                    <td>${ctnOption}</td>
+                    <td class="value">${matched.ocean.toFixed(2)}</td>
+                    <td class="value">${matched.faf.toFixed(2)}</td>
+                    <td class="value">${matched.bau.toFixed(2)}</td>
+                </tr></tbody>
             </table>
             <div class="status" style="margin-top:12px;">✅ 所有数值均为表格原始值，未做计算</div>
         `;
     }
     
-    // 事件绑定
-    document.getElementById('rateTypeSelect').addEventListener('change', () => {
-        updatePodByRateType();
-    });
-    document.getElementById('polSelect').addEventListener('change', () => {
-        onPolChange();
-    });
+    document.getElementById('rateTypeSelect').addEventListener('change', updatePodByRateType);
+    document.getElementById('polSelect').addEventListener('change', onPolChange);
     document.getElementById('searchBtn').addEventListener('click', search);
-    document.getElementById('refreshBtn').addEventListener('click', () => {
-        loadData();
-    });
+    document.getElementById('refreshBtn').addEventListener('click', loadData);
     
-    // 页面加载
     loadData();
 </script>
 </body>
