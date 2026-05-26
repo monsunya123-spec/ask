@@ -10,33 +10,58 @@
 
 body {
   margin: 0;
+  padding: 40px;
   font-family: Inter, Arial, sans-serif;
   background: #f6f8fb;
   color: #172b2c;
 }
 
 .container {
-  max-width: 980px;
-  margin: 32px auto;
-  padding: 28px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px;
   background: #ffffff;
   border: 1px solid #e6ebf1;
-  border-radius: 18px;
+  border-radius: 20px;
   box-shadow: 0 8px 24px rgba(15, 35, 55, 0.06);
 }
 
-h1 {
-  margin: 0 0 26px;
-  font-size: 26px;
+/* ===== TOP BAR ===== */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand img {
+  height: 38px;
+  width: auto;
+  object-fit: contain;
+}
+
+.brand-text {
+  font-size: 20px;
   font-weight: 700;
   color: #123c3d;
+  letter-spacing: -0.02em;
 }
+
+/* ===== GRID ===== */
 
 .grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 18px;
 }
+
+/* ===== FORM ===== */
 
 label {
   display: block;
@@ -50,14 +75,15 @@ label {
 
 select {
   width: 100%;
-  height: 42px;
-  padding: 0 12px;
+  height: 44px;
+  padding: 0 14px;
   font-size: 14px;
   color: #111827;
   background: #ffffff;
   border: 1px solid #d8e0ea;
   border-radius: 10px;
   outline: none;
+  transition: 0.2s;
 }
 
 select:focus {
@@ -65,20 +91,23 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(30, 119, 119, 0.12);
 }
 
+/* ===== BUTTON ===== */
+
 .button-row {
   display: flex;
   gap: 12px;
-  margin-top: 22px;
+  margin-top: 24px;
 }
 
 button {
-  height: 42px;
-  padding: 0 22px;
+  height: 44px;
+  padding: 0 24px;
   font-size: 14px;
   font-weight: 700;
   border: none;
   border-radius: 999px;
   cursor: pointer;
+  transition: 0.2s;
 }
 
 button:first-child {
@@ -96,8 +125,10 @@ button:hover {
   opacity: 0.95;
 }
 
+/* ===== RESULT ===== */
+
 .error {
-  margin-top: 22px;
+  margin-top: 24px;
   padding: 16px 18px;
   background: #fff1f1;
   border: 1px solid #ffd6d6;
@@ -107,15 +138,15 @@ button:hover {
 }
 
 .result {
-  margin-top: 22px;
-  padding: 20px;
+  margin-top: 24px;
+  padding: 22px;
   background: #f7fbff;
   border: 1px solid #dceafe;
   border-radius: 14px;
 }
 
 .result h2 {
-  margin: 0 0 14px;
+  margin: 0 0 16px;
   font-size: 20px;
   color: #123c3d;
 }
@@ -126,16 +157,22 @@ button:hover {
 }
 
 .result h3 {
-  margin-top: 16px;
+  margin-top: 18px;
   padding-top: 14px;
   border-top: 1px solid #d9e4f0;
   font-size: 18px;
   color: #123c3d;
 }
 
+/* ===== MOBILE ===== */
+
 @media (max-width: 850px) {
+
+  body {
+    padding: 16px;
+  }
+
   .container {
-    margin: 16px;
     padding: 20px;
   }
 
@@ -150,6 +187,7 @@ button:hover {
   button {
     width: 100%;
   }
+
 }
 
 
