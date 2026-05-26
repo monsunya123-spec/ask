@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>内部报价工具</title>
+    <title>内部报价工具 - 按列位置读取</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; background: #eef2f5; margin: 0; padding: 20px; }
@@ -41,8 +41,8 @@
     <div class="header">
         <img src="ask_logo.jpg" alt="Logo" class="logo-img" onerror="this.style.display='none'">
         <div class="title">
-            📊 内部报价工具 · 最终版
-            <span id="dataBadge" class="badge">⚙️ 使用最新Sheet</span>
+            📊 内部报价工具 · 按列位置读取
+            <span id="dataBadge" class="badge">⚙️ 使用列位置(D/E/F)</span>
         </div>
     </div>
     <div class="content">
@@ -61,12 +61,12 @@
         <div id="debugInfo" class="data-info">📋 等待数据加载...</div>
         
         <div class="note">
-            🔄 <strong>数据源与计费逻辑</strong><br/>
-            ✅ <strong>OCEAN FREIGHT</strong> = 从您的 Google Sheets 读取 <strong>Total COST(USD)</strong> 列实时数值<br/>
+            🔄 <strong>数据源读取方式</strong><br/>
+            ✅ 按列位置读取（不依赖列名）：<strong>D列 = POL</strong>，<strong>E列 = POD</strong>，<strong>F列 = Total COST(USD)</strong><br/>
+            ✅ <strong>OCEAN FREIGHT</strong> = 从您的 Google Sheets 读取 F列 数值<br/>
             ✅ <strong>FAK / NOR</strong> = OCEAN FREIGHT + Low Sulphur Fuel surcharge (FAF)<br/>
             ✅ <strong>NAC</strong> = OCEAN FREIGHT + BAU<br/>
-            📌 POD 规则：FAK/NOR 显示简洁标准名；NAC 显示特定长字符串<br/>
-            🔗 数据源链接已更新为最新发布链接
+            📌 请确保您的表格列顺序为：A B C D(POL) E(POD) F(Total COST) ...
         </div>
         <div style="margin-top: 16px; text-align: right;">
             <button id="refreshDataBtn" class="refresh-btn">🔄 手动刷新数据</button>
@@ -76,11 +76,11 @@
 
 <script>
     // ============================================================
-    // 您最新的 Google Sheets CSV 发布链接 (2024年12月)
+    // 您最新的 Google Sheets CSV 发布链接
     // ============================================================
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_rkgXWvqJu9uRWkyHXLMoGXe1Y1A2pbNvpZ52xU9xr0UE7GsDNSvKXvck8Zk-CRvt7Ys1nClO96tI/pub?output=csv";
     
-    // CORS 代理服务 (解决跨域问题)
+    // CORS 代理服务
     const PROXY_URL = "https://api.allorigins.win/raw?url=";
     const FULL_URL = PROXY_URL + encodeURIComponent(CSV_URL);
     
@@ -93,7 +93,7 @@
     let freightData = [];
     let lastLoadTime = null;
     
-    // FAF 和 BUC 月度数据 (Low Sulphur Fuel surcharge 和 BAU)
+    // FAF 和 BUC 月度数据
     const bucFafSource = {
         months: ["Dec","Jan","Feb","Mar","Apr","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
         rows: [
@@ -132,13 +132,13 @@
         return result;
     }
     
-    // 通过代理读取 Google Sheets 数据
+    // 按列位置读取：D列(索引3)=POL, E列(索引4)=POD, F列(索引5)=Total COST
     async function loadRealTimeData() {
         const statusDiv = document.getElementById('statusMsg');
         const debugDiv = document.getElementById('debugInfo');
         const badge = document.getElementById('dataBadge');
         
-        statusDiv.innerHTML = '<span class="loader"></span> 正在读取 Google Sheets 最新数据...';
+        statusDiv.innerHTML = '<span class="loader"></span> 正在读取 Google Sheets 数据（按列位置 D/E/F）...';
         statusDiv.className = "status status-loading";
         debugDiv.innerHTML = "🔄 请求中，请稍候...";
         
@@ -150,49 +150,51 @@
             const lines = csvText.split(/\r?\n/).filter(l => l.trim().length > 0);
             if (lines.length < 2) throw new Error("CSV数据为空");
             
+            // 读取表头（仅用于调试显示）
             const headers = parseCSVLine(lines[0]);
-            console.log("检测到列名:", headers);
+            console.log("检测到表头:", headers);
             
-            // 查找关键列索引 (不区分大小写)
-            const polIdx = headers.findIndex(h => h.toLowerCase().trim() === 'pol');
-            const podIdx = headers.findIndex(h => h.toLowerCase().trim() === 'pod');
-            const totalCostIdx = headers.findIndex(h => 
-                h.toLowerCase().includes('total cost') || 
-                h.toLowerCase().includes('total cost(usd)') ||
-                h.toLowerCase() === 'total cost'
-            );
-            const containerIdx = headers.findIndex(h => 
-                h.toLowerCase().includes('container') || h.toLowerCase().includes('type') || h.toLowerCase() === 'size'
-            );
-            
-            if (polIdx === -1) throw new Error("缺少 'POL' 列");
-            if (podIdx === -1) throw new Error("缺少 'POD' 列");
-            if (totalCostIdx === -1) throw new Error("未找到 'Total COST(USD)' 列");
+            // 按列位置定义索引（CSV中列索引从0开始）
+            // D列 = 索引3, E列 = 索引4, F列 = 索引5
+            const POL_COL_IDX = 3;      // D列
+            const POD_COL_IDX = 4;      // E列
+            const TOTAL_COST_COL_IDX = 5; // F列
             
             let newData = [];
             let polSet = new Set();
+            let skippedCount = 0;
             
             for (let i = 1; i < lines.length; i++) {
                 const cols = parseCSVLine(lines[i]);
-                if (cols.length <= Math.max(polIdx, podIdx, totalCostIdx)) continue;
                 
-                const polVal = cols[polIdx]?.trim();
-                const rawPodVal = cols[podIdx]?.trim();
-                let totalCostVal = parseFloat(cols[totalCostIdx]?.trim().replace(/[^0-9.-]/g, ''));
+                // 检查是否有足够的列
+                if (cols.length <= TOTAL_COST_COL_IDX) {
+                    skippedCount++;
+                    continue;
+                }
                 
-                if (!polVal || !rawPodVal || isNaN(totalCostVal) || totalCostVal <= 0) continue;
+                const polVal = cols[POL_COL_IDX]?.trim();
+                const podVal = cols[POD_COL_IDX]?.trim();
+                let totalCostVal = parseFloat(cols[TOTAL_COST_COL_IDX]?.trim().replace(/[^0-9.-]/g, ''));
                 
+                if (!polVal || !podVal || isNaN(totalCostVal) || totalCostVal <= 0) {
+                    skippedCount++;
+                    continue;
+                }
+                
+                // 确定柜型（优先从表格中找柜型列，如果没有则默认为20GP）
                 let containerType = "20GP";
-                if (containerIdx !== -1 && cols[containerIdx]) {
-                    let ct = cols[containerIdx].toUpperCase();
+                // 尝试找柜型列（通常在B列或C列，索引1或2）
+                if (cols.length > 2) {
+                    let ct = cols[2]?.toUpperCase() || "";
                     if (ct.includes("40HQ")) containerType = "40HQ";
-                    else if (ct.includes("40GP") || ct.includes("40HC") || ct === "40") containerType = "40GP";
+                    else if (ct.includes("40GP") || ct.includes("40HC")) containerType = "40GP";
                     else if (ct.includes("20")) containerType = "20GP";
                 }
                 
                 newData.push({ 
                     pol: polVal, 
-                    podRaw: rawPodVal,
+                    podRaw: podVal,
                     containerType, 
                     oceanFreight: totalCostVal 
                 });
@@ -200,13 +202,13 @@
             }
             
             if (newData.length === 0) {
-                throw new Error("未从Sheet读取到有效运价数据");
+                throw new Error(`未从Sheet读取到有效运价数据。共检查 ${lines.length-1} 行数据行，跳过 ${skippedCount} 行。请确保 D列=POL, E列=POD, F列=Total COST(USD) 有有效数值。`);
             }
             
             freightData = newData;
             lastLoadTime = new Date();
             
-            debugDiv.innerHTML = `✅ 读取成功！共 ${freightData.length} 条运价记录<br>📅 最后更新: ${lastLoadTime.toLocaleString()}<br>📍 发现 ${polSet.size} 个POL港口: ${Array.from(polSet).slice(0, 15).join(', ')}${polSet.size > 15 ? '...' : ''}`;
+            debugDiv.innerHTML = `✅ 读取成功！共 ${freightData.length} 条运价记录<br>📅 最后更新: ${lastLoadTime.toLocaleString()}<br>📍 发现 ${polSet.size} 个POL港口: ${Array.from(polSet).slice(0, 20).join(', ')}${polSet.size > 20 ? '...' : ''}<br>📊 表头信息: ${headers.slice(0, 8).join(' | ')}`;
             statusDiv.innerHTML = `✅ 成功加载实时数据！共 ${freightData.length} 条运价 | 更新时间: ${lastLoadTime.toLocaleString()}`;
             statusDiv.className = "status status-success";
             badge.innerHTML = `✅ ${freightData.length} 条数据`;
@@ -216,10 +218,10 @@
             
         } catch (err) {
             console.error("加载失败:", err);
-            statusDiv.innerHTML = `⚠️ 读取失败: ${err.message}<br><br>可能原因：<br>1. 网络问题，请稍后点击"手动刷新数据"重试<br>2. 表格链接是否仍然有效<br>3. 表格是否已发布为公开网页`;
+            statusDiv.innerHTML = `⚠️ 读取失败: ${err.message}<br><br>请确认：<br>1. 表格已发布（文件 → 分享 → 发布到网络）<br>2. 列顺序为：D列=POL, E列=POD, F列=Total COST(USD)<br>3. 数据行有完整内容`;
             statusDiv.className = "status status-error";
             debugDiv.innerHTML = `错误详情: ${err.message}<br>数据链接: ${CSV_URL.substring(0, 80)}...`;
-            badge.innerHTML = "⚠️ 连接失败";
+            badge.innerHTML = "⚠️ 读取失败";
             freightData = [];
         }
     }
@@ -254,7 +256,6 @@
     
     function findOceanFreight(rateType, pol, selectedPod, ctnType) {
         if (rateType === "NAC") {
-            // NAC: 精确匹配长字符串
             const match = freightData.find(item => 
                 item.pol === pol && 
                 item.podRaw === selectedPod && 
@@ -262,7 +263,6 @@
             );
             if (match) return match.oceanFreight;
             
-            // 40GP/40HQ 互换匹配
             if (ctnType === "40HQ" || ctnType === "40GP") {
                 const altMatch = freightData.find(item => 
                     item.pol === pol && 
@@ -273,7 +273,6 @@
             }
             return null;
         } else {
-            // FAK/NOR: 匹配原始POD包含标准名
             const match = freightData.find(item => 
                 item.pol === pol && 
                 item.containerType === ctnType &&
@@ -281,7 +280,6 @@
             );
             if (match) return match.oceanFreight;
             
-            // 40GP/40HQ 互换匹配
             if (ctnType === "40HQ" || ctnType === "40GP") {
                 const altMatch = freightData.find(item => 
                     item.pol === pol && 
@@ -315,7 +313,7 @@
         const oceanFreight = findOceanFreight(rateType, pol, pod, ctnType);
         
         if (oceanFreight === null || oceanFreight === undefined) {
-            document.getElementById('resultArea').innerHTML = `<div style="background:#fee;padding:16px;border-radius:16px;color:#b91c1c;">❌ 未找到匹配运价<br/>RATE TYPE: ${rateType} | POL: ${pol} | POD: ${pod} | 柜型: ${ctnType}<br/><br/>请检查表格中是否有对应的 Total COST(USD) 数据。</div>`;
+            document.getElementById('resultArea').innerHTML = `<div style="background:#fee;padding:16px;border-radius:16px;color:#b91c1c;">❌ 未找到匹配运价<br/>RATE TYPE: ${rateType} | POL: ${pol} | POD: ${pod} | 柜型: ${ctnType}</div>`;
             return;
         }
         
@@ -362,10 +360,10 @@
                 </tbody>
             </table>
             <div style="font-size:12px; margin-top:16px; padding:10px; background:#f0f6f7; border-radius:12px;">
-                📌 OCEAN FREIGHT = 表格中的 <strong>Total COST(USD)</strong> 列实时数值<br>
+                📌 OCEAN FREIGHT = 表格中 <strong>F列 (Total COST)</strong> 的实时数值<br>
                 📌 ${surchargeName} = 月度动态值 × ${is40ft ? '2 (40尺倍数)' : '1 (20尺倍数)'}<br>
                 📅 数据读取时间: ${lastLoadTime ? lastLoadTime.toLocaleString() : '刚刚'}<br>
-                🔗 数据源: 您的最新Google Sheets
+                📍 读取规则: D列=POL | E列=POD | F列=Total COST
             </div>
         `;
         
@@ -374,7 +372,6 @@
         document.getElementById('statusMsg').className = "status status-success";
     }
     
-    // 事件绑定
     window.addEventListener('load', () => {
         loadRealTimeData();
         document.getElementById('quoteBtn').addEventListener('click', generateQuote);
