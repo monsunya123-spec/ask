@@ -4,107 +4,140 @@
 <meta charset="UTF-8">
 <title>报价查询工具</title>
 <style>
+* {
+  box-sizing: border-box;
+}
+
 body {
-  font-family: Arial, sans-serif;
-  padding: 16px;
-  background: #f5f7fa;
-  color: #1f2937;
-  font-size: 14px;
+  margin: 0;
+  font-family: Inter, Arial, sans-serif;
+  background: #f6f8fb;
+  color: #172b2c;
 }
 
 .container {
-  max-width: 1000px;
-  margin: auto;
-  background: white;
-  padding: 18px;
-  border-radius: 10px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  max-width: 980px;
+  margin: 32px auto;
+  padding: 28px;
+  background: #ffffff;
+  border: 1px solid #e6ebf1;
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(15, 35, 55, 0.06);
 }
 
 h1 {
-  font-size: 22px;
-  margin-bottom: 18px;
-  color: #1f3c3d;
-}
-
-label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #264b4c;
-}
-
-select {
-  width: 100%;
-  height: 40px;
-  padding: 0 10px;
-  font-size: 14px;
-  border: 1px solid #cfd8e3;
-  border-radius: 8px;
-  background: white;
-}
-
-button {
-  height: 40px;
-  padding: 0 18px;
-  font-size: 14px;
-  font-weight: 600;
-  border: none;
-  border-radius: 8px;
-  background: #155e63;
-  color: white;
-  cursor: pointer;
-}
-
-button:hover {
-  opacity: 0.92;
+  margin: 0 0 26px;
+  font-size: 26px;
+  font-weight: 700;
+  color: #123c3d;
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
+  gap: 18px;
+}
+
+label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #416365;
+}
+
+select {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  font-size: 14px;
+  color: #111827;
+  background: #ffffff;
+  border: 1px solid #d8e0ea;
+  border-radius: 10px;
+  outline: none;
+}
+
+select:focus {
+  border-color: #1e7777;
+  box-shadow: 0 0 0 3px rgba(30, 119, 119, 0.12);
 }
 
 .button-row {
-  margin-top: 18px;
   display: flex;
   gap: 12px;
+  margin-top: 22px;
+}
+
+button {
+  height: 42px;
+  padding: 0 22px;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+button:first-child {
+  background: #155e63;
+  color: white;
+}
+
+button:last-child {
+  background: #edf3f3;
+  color: #155e63;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  opacity: 0.95;
 }
 
 .error {
-  background: #ffe8e8;
-  color: #c81e1e;
-  padding: 14px;
-  margin-top: 18px;
-  border-radius: 8px;
+  margin-top: 22px;
+  padding: 16px 18px;
+  background: #fff1f1;
+  border: 1px solid #ffd6d6;
+  border-radius: 12px;
+  color: #b91c1c;
   font-size: 14px;
 }
 
 .result {
-  background: #eef6ff;
-  padding: 18px;
-  margin-top: 18px;
-  border-radius: 10px;
+  margin-top: 22px;
+  padding: 20px;
+  background: #f7fbff;
+  border: 1px solid #dceafe;
+  border-radius: 14px;
 }
 
-.row {
-  display: flex;
-  justify-content: space-between;
+.result h2 {
+  margin: 0 0 14px;
+  font-size: 20px;
+  color: #123c3d;
+}
+
+.result p {
   margin: 8px 0;
   font-size: 14px;
 }
 
-.total {
-  margin-top: 14px;
-  padding-top: 10px;
-  border-top: 1px solid #d7dfe8;
-  font-size: 16px;
-  font-weight: bold;
+.result h3 {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #d9e4f0;
+  font-size: 18px;
+  color: #123c3d;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 850px) {
+  .container {
+    margin: 16px;
+    padding: 20px;
+  }
 
   .grid {
     grid-template-columns: 1fr;
@@ -117,14 +150,26 @@ button:hover {
   button {
     width: 100%;
   }
-
 }
+
+
+
+  
 </style>
 </head>
 
 <body>
 
-<h1>📋 报价查询工具</h1>
+<div class="topbar">
+
+  <div class="brand">
+    <img src="logo.png" alt="Logo">
+    <div class="brand-text">
+      Freight Quote Tool
+    </div>
+  </div>
+
+</div>
 
 <label>RATE TYPE</label>
 <select id="rateType"></select>
