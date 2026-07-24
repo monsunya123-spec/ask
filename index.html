@@ -17,7 +17,7 @@ body {
 }
 
 .container {
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 32px;
   background: #ffffff;
@@ -32,6 +32,8 @@ body {
   display: flex;
   align-items: center;
   margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e6ebf1;
 }
 
 .brand {
@@ -51,6 +53,28 @@ body {
   font-weight: 700;
   color: #123c3d;
   letter-spacing: -0.02em;
+}
+
+/* ===== MAIN LAYOUT ===== */
+
+.main-layout {
+  display: flex;
+  gap: 32px;
+  margin-top: 10px;
+}
+
+/* ===== LEFT SIDEBAR ===== */
+
+.left-sidebar {
+  flex: 0 0 340px;
+  min-width: 280px;
+}
+
+/* ===== RIGHT CONTENT ===== */
+
+.right-content {
+  flex: 1;
+  min-width: 0;
 }
 
 /* ===== FORM ===== */
@@ -76,6 +100,7 @@ select {
   border-radius: 10px;
   outline: none;
   transition: 0.2s;
+  margin-bottom: 16px;
 }
 
 select:focus {
@@ -98,7 +123,7 @@ select:disabled {
 .button-row {
   display: flex;
   gap: 12px;
-  margin-top: 24px;
+  margin-top: 8px;
 }
 
 button {
@@ -125,10 +150,62 @@ button:disabled {
   cursor: not-allowed;
 }
 
+button.reset-btn {
+  background: #edf3f3;
+  color: #155e63;
+}
+
+button.reset-btn:hover {
+  background: #dce8e8;
+}
+
+/* ===== STATUS ===== */
+
+.status {
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.status.loading {
+  background: #f0f7ff;
+  border: 1px solid #cde0f5;
+  color: #1a4f8a;
+}
+
+.status.success {
+  background: #f0faf0;
+  border: 1px solid #b8e6b8;
+  color: #1a6e1a;
+}
+
+.status.error {
+  background: #fff1f1;
+  border: 1px solid #ffd6d6;
+  color: #b91c1c;
+}
+
 /* ===== RESULT ===== */
 
+.result-wrapper {
+  min-height: 200px;
+  background: #f8fafc;
+  border: 1px solid #e6ebf1;
+  border-radius: 14px;
+  padding: 24px;
+}
+
+.result-wrapper .empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: #8a9ba8;
+  font-size: 15px;
+}
+
 .error {
-  margin-top: 24px;
   padding: 16px 18px;
   background: #fff1f1;
   border: 1px solid #ffd6d6;
@@ -137,22 +214,7 @@ button:disabled {
   font-size: 14px;
 }
 
-.success {
-  margin-top: 24px;
-  padding: 16px 18px;
-  background: #f0faf0;
-  border: 1px solid #b8e6b8;
-  border-radius: 12px;
-  color: #1a6e1a;
-  font-size: 14px;
-}
-
 .result {
-  margin-top: 24px;
-  padding: 22px;
-  background: #f7fbff;
-  border: 1px solid #dceafe;
-  border-radius: 14px;
   color: #111827;
 }
 
@@ -162,42 +224,71 @@ button:disabled {
   color: #123c3d;
 }
 
-.result p {
-  margin: 8px 0;
-  font-size: 14px;
-  color: #111827;
+.result .row {
+  display: flex;
+  padding: 6px 0;
+  border-bottom: 1px solid #f0f2f5;
 }
 
-.result h3 {
-  margin-top: 18px;
-  padding-top: 14px;
-  border-top: 1px solid #d9e4f0;
-  font-size: 18px;
+.result .row:last-child {
+  border-bottom: none;
+}
+
+.result .label {
+  flex: 0 0 140px;
+  font-weight: 600;
+  color: #416365;
+  font-size: 13px;
+}
+
+.result .value {
+  flex: 1;
+  color: #111827;
+  font-size: 13px;
+}
+
+.result .divider {
+  margin: 12px 0;
+  border: none;
+  border-top: 2px dashed #d9e4f0;
+}
+
+.result .total-row {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 2px solid #1f4e78;
+}
+
+.result .total-row .label {
+  font-size: 16px;
   color: #123c3d;
 }
 
-/* ===== LOADING ===== */
-
-.loading {
-  margin-top: 20px;
-  padding: 16px;
-  background: #f0f7ff;
-  border: 1px solid #cde0f5;
-  border-radius: 12px;
-  color: #1a4f8a;
-  font-size: 14px;
+.result .total-row .value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #155e63;
 }
 
 /* ===== MOBILE ===== */
 
-@media (max-width: 850px) {
-
+@media (max-width: 900px) {
   body {
     padding: 16px;
   }
 
   .container {
     padding: 20px;
+  }
+
+  .main-layout {
+    flex-direction: column;
+  }
+
+  .left-sidebar {
+    flex: none;
+    width: 100%;
+    min-width: unset;
   }
 
   .button-row {
@@ -208,44 +299,76 @@ button:disabled {
     width: 100%;
   }
 
+  .result .row {
+    flex-direction: column;
+    padding: 8px 0;
+  }
+
+  .result .label {
+    flex: none;
+    margin-bottom: 2px;
+    font-size: 12px;
+  }
+
+  .result .value {
+    font-size: 14px;
+  }
 }
 </style>
 </head>
 <body>
 
-<div class="topbar">
-  <div class="brand">
-    <img src="logo.jpg" alt="Logo" onerror="this.style.display='none'">
-    <div class="brand-text">
-      Freight Quote Tool
+<div class="container">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="brand">
+      <img src="logo.jpg" alt="Logo" onerror="this.style.display='none'">
+      <div class="brand-text">Freight Quote Tool</div>
     </div>
   </div>
+
+  <!-- STATUS -->
+  <div id="status" class="status loading">⏳ 正在加载数据...</div>
+
+  <!-- MAIN LAYOUT -->
+  <div class="main-layout">
+
+    <!-- LEFT SIDEBAR -->
+    <div class="left-sidebar">
+      <label>VALIDITY</label>
+      <select id="validity" disabled></select>
+
+      <label>RATE TYPE</label>
+      <select id="rateType" disabled></select>
+
+      <label>POL</label>
+      <select id="pol" disabled></select>
+
+      <label>POD</label>
+      <select id="pod" disabled></select>
+
+      <label>CONTAINER TYPE</label>
+      <select id="containerType" disabled></select>
+
+      <div class="button-row">
+        <button id="queryBtn" onclick="calculateQuote()" disabled>🔍 查询</button>
+        <button class="reset-btn" onclick="resetAll()">🔄 Reset</button>
+      </div>
+    </div>
+
+    <!-- RIGHT CONTENT -->
+    <div class="right-content">
+      <div class="result-wrapper" id="resultWrapper">
+        <div class="empty-state">
+          📋 请选择查询条件后点击「查询」
+        </div>
+      </div>
+    </div>
+
+  </div>
+
 </div>
-
-<!-- 数据加载状态 -->
-<div id="status" class="loading">⏳ 正在加载数据...</div>
-
-<label>VALIDITY</label>
-<select id="validity" disabled></select>
-
-<label>RATE TYPE</label>
-<select id="rateType" disabled></select>
-
-<label>POL</label>
-<select id="pol" disabled></select>
-
-<label>POD</label>
-<select id="pod" disabled></select>
-
-<label>CONTAINER TYPE</label>
-<select id="containerType" disabled></select>
-
-<div class="button-row">
-  <button id="queryBtn" onclick="calculateQuote()" disabled>🔍 查询</button>
-  <button onclick="resetAll()">🔄 Reset</button>
-</div>
-
-<div id="output"></div>
 
 <script>
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_rkgXWvqJu9uRWkyHXLMoGXe1Y1A2pbNvpZ52xU9xr0UE7GsDNSvKXvck8Zk-CRvt7Ys1nClO96tI/pub?output=csv";
@@ -318,11 +441,7 @@ function fillSelect(id, values, selectedValue = "") {
     select.appendChild(opt);
   });
 
-  // 如果原选择仍然存在，就恢复显示
-  select.value = values.includes(selectedValue)
-    ? selectedValue
-    : "";
-
+  select.value = values.includes(selectedValue) ? selectedValue : "";
   select.disabled = values.length === 0;
 }
 
@@ -345,46 +464,24 @@ function refreshAllSelects() {
 
   const f = getFilters();
 
-  const validityValues = unique(
-    allRows.map(r => r["VALIDITY"])
-  );
+  const validityValues = unique(allRows.map(r => r["VALIDITY"]));
   fillSelect("validity", validityValues, f.validity);
 
-  const afterValidity = allRows.filter(r =>
-    !f.validity || r["VALIDITY"] === f.validity
-  );
-  const rateTypeValues = unique(
-    afterValidity.map(r => r["FAK/NAC"])
-  );
+  const afterValidity = allRows.filter(r => !f.validity || r["VALIDITY"] === f.validity);
+  const rateTypeValues = unique(afterValidity.map(r => r["FAK/NAC"]));
   fillSelect("rateType", rateTypeValues, f.rateType);
 
-  const afterRate = afterValidity.filter(r =>
-    !f.rateType || r["FAK/NAC"] === f.rateType
-  );
-  const polValues = unique(
-    afterRate.map(r => r["POL"])
-  );
+  const afterRate = afterValidity.filter(r => !f.rateType || r["FAK/NAC"] === f.rateType);
+  const polValues = unique(afterRate.map(r => r["POL"]));
   fillSelect("pol", polValues, f.pol);
 
-  const afterPol = afterRate.filter(r =>
-    !f.pol || r["POL"] === f.pol
-  );
-  const podValues = unique(
-    afterPol.map(r => r["POD"])
-  );
+  const afterPol = afterRate.filter(r => !f.pol || r["POL"] === f.pol);
+  const podValues = unique(afterPol.map(r => r["POD"]));
   fillSelect("pod", podValues, f.pod);
 
-  const afterPod = afterPol.filter(r =>
-    !f.pod || r["POD"] === f.pod
-  );
-  const containerValues = unique(
-    afterPod.map(r => r["CONTAINER TYPE"])
-  );
-  fillSelect(
-    "containerType",
-    containerValues,
-    f.containerType
-  );
+  const afterPod = afterPol.filter(r => !f.pod || r["POD"] === f.pod);
+  const containerValues = unique(afterPod.map(r => r["CONTAINER TYPE"]));
+  fillSelect("containerType", containerValues, f.containerType);
 
   document.getElementById("queryBtn").disabled = false;
 }
@@ -422,9 +519,8 @@ async function loadData() {
     
     dataLoaded = true;
     
-    // 只显示简单成功信息，不显示详细数据
     status.innerHTML = `✅ 数据加载成功！共 ${allRows.length} 行数据`;
-    status.className = "success";
+    status.className = "status success";
     
     refreshAllSelects();
     setupEventListeners();
@@ -432,12 +528,9 @@ async function loadData() {
   } catch (error) {
     status.innerHTML = `
       ❌ 数据加载失败: ${error.message}<br>
-      请检查:<br>
-      1. 网络连接是否正常<br>
-      2. Google Sheets 是否公开访问<br>
-      3. CSV 链接是否正确
+      请检查网络连接或 CSV 链接是否有效
     `;
-    status.className = "error";
+    status.className = "status error";
     console.error("加载错误:", error);
   }
 }
@@ -449,9 +542,10 @@ function calculateQuote() {
   }
 
   const f = getFilters();
+  const wrapper = document.getElementById("resultWrapper");
   
   if (!f.validity || !f.rateType || !f.pol || !f.pod || !f.containerType) {
-    document.getElementById("output").innerHTML = `
+    wrapper.innerHTML = `
       <div class="error">
         ⚠️ 请选择所有筛选条件
       </div>
@@ -467,48 +561,89 @@ function calculateQuote() {
     r["CONTAINER TYPE"] === f.containerType
   );
 
-  const output = document.getElementById("output");
-
   if (!matched) {
-    output.innerHTML = `
+    wrapper.innerHTML = `
       <div class="error">
-        ❌ 未找到匹配数据
+        ❌ 未找到匹配数据，请调整筛选条件
       </div>
     `;
     return;
   }
 
-  output.innerHTML = `
+  const oceanFreight = money(matched["OCEAN FREIGHT"]);
+  const faf = money(matched["Low Sulphur Fuel surcharge (FAF)"]);
+  const bau = money(matched["BAU"]);
+  const total = money(matched["Total COST(USD)"]);
+
+  wrapper.innerHTML = `
     <div class="result">
       <h2>✅ 报价结果</h2>
-      <p>VALIDITY: ${matched["VALIDITY"] || "-"}</p>
-      <p>RATE TYPE: ${matched["FAK/NAC"]}</p>
-      <p>CARRIER: ${matched["CARRIER"] || "-"}</p>
-      <p>LINE: ${matched["Line"] || "-"}</p>
-      <p>POL: ${matched["POL"]}</p>
-      <p>POD: ${matched["POD"]}</p>
-      <p>CONTAINER TYPE: ${matched["CONTAINER TYPE"]}</p>
-      <hr>
-      <p>OCEAN FREIGHT: USD ${money(matched["OCEAN FREIGHT"]).toFixed(2)}</p>
-      <p>FAF: USD ${money(matched["Low Sulphur Fuel surcharge (FAF)"]).toFixed(2)}</p>
-      <p>BAU: USD ${money(matched["BAU"]).toFixed(2)}</p>
-      <h3>TOTAL COST: ${matched["Total COST(USD)"]}</h3>
+      
+      <div class="row">
+        <div class="label">VALIDITY</div>
+        <div class="value">${matched["VALIDITY"] || "-"}</div>
+      </div>
+      <div class="row">
+        <div class="label">RATE TYPE</div>
+        <div class="value">${matched["FAK/NAC"] || "-"}</div>
+      </div>
+      <div class="row">
+        <div class="label">CARRIER</div>
+        <div class="value">${matched["CARRIER"] || "-"}</div>
+      </div>
+      <div class="row">
+        <div class="label">LINE</div>
+        <div class="value">${matched["Line"] || "-"}</div>
+      </div>
+      <div class="row">
+        <div class="label">POL</div>
+        <div class="value">${matched["POL"] || "-"}</div>
+      </div>
+      <div class="row">
+        <div class="label">POD</div>
+        <div class="value">${matched["POD"] || "-"}</div>
+      </div>
+      <div class="row">
+        <div class="label">CONTAINER TYPE</div>
+        <div class="value">${matched["CONTAINER TYPE"] || "-"}</div>
+      </div>
+      
+      <hr class="divider">
+      
+      <div class="row">
+        <div class="label">OCEAN FREIGHT</div>
+        <div class="value">USD ${oceanFreight.toFixed(2)}</div>
+      </div>
+      <div class="row">
+        <div class="label">FAF</div>
+        <div class="value">USD ${faf.toFixed(2)}</div>
+      </div>
+      <div class="row">
+        <div class="label">BAU</div>
+        <div class="value">USD ${bau.toFixed(2)}</div>
+      </div>
+      
+      <div class="total-row">
+        <div class="row">
+          <div class="label">TOTAL COST</div>
+          <div class="value">USD ${total.toFixed(2)}</div>
+        </div>
+      </div>
     </div>
   `;
 }
 
 function resetAll() {
-  // 清空所有下拉框
   const selectIds = ["validity", "rateType", "pol", "pod", "containerType"];
   selectIds.forEach(id => {
     const select = document.getElementById(id);
     select.value = "";
   });
   
-  // 清空结果显示
-  document.getElementById("output").innerHTML = "";
+  document.getElementById("resultWrapper").innerHTML = `
+    <div class="empty-state">📋 请选择查询条件后点击「查询」</div>
+  `;
   
-  // 重新刷新下拉框选项
   refreshAllSelects();
 }
 
