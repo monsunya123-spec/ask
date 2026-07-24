@@ -53,14 +53,6 @@ body {
   letter-spacing: -0.02em;
 }
 
-/* ===== GRID ===== */
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
-}
-
 /* ===== FORM ===== */
 
 label {
@@ -78,7 +70,7 @@ select {
   height: 44px;
   padding: 0 14px;
   font-size: 14px;
-  color: #111827;
+  color: #111827;  /* 深色文字 */
   background: #ffffff;
   border: 1px solid #d8e0ea;
   border-radius: 10px;
@@ -91,38 +83,40 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(30, 119, 119, 0.12);
 }
 
-/* ===== BUTTON ===== */
-
-.button-row {
-  display: flex;
-  gap: 12px;
-  margin-top: 24px;
+select option {
+  color: #111827;  /* 选项文字深色 */
 }
+
+select:disabled {
+  background: #f3f6f9;
+  color: #8a9ba8;
+  cursor: not-allowed;
+}
+
+/* ===== BUTTON ===== */
 
 button {
   height: 44px;
   padding: 0 24px;
+  margin-top: 24px;
   font-size: 14px;
   font-weight: 700;
   border: none;
   border-radius: 999px;
   cursor: pointer;
   transition: 0.2s;
-}
-
-button:first-child {
   background: #155e63;
   color: white;
-}
-
-button:last-child {
-  background: #edf3f3;
-  color: #155e63;
 }
 
 button:hover {
   transform: translateY(-1px);
   opacity: 0.95;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ===== RESULT ===== */
@@ -137,12 +131,23 @@ button:hover {
   font-size: 14px;
 }
 
+.success {
+  margin-top: 24px;
+  padding: 16px 18px;
+  background: #f0faf0;
+  border: 1px solid #b8e6b8;
+  border-radius: 12px;
+  color: #1a6e1a;
+  font-size: 14px;
+}
+
 .result {
   margin-top: 24px;
   padding: 22px;
   background: #f7fbff;
   border: 1px solid #dceafe;
   border-radius: 14px;
+  color: #111827;  /* 整体文字深色 */
 }
 
 .result h2 {
@@ -154,6 +159,7 @@ button:hover {
 .result p {
   margin: 8px 0;
   font-size: 14px;
+  color: #111827;  /* 段落文字深色 */
 }
 
 .result h3 {
@@ -162,6 +168,18 @@ button:hover {
   border-top: 1px solid #d9e4f0;
   font-size: 18px;
   color: #123c3d;
+}
+
+/* ===== LOADING ===== */
+
+.loading {
+  margin-top: 20px;
+  padding: 16px;
+  background: #f0f7ff;
+  border: 1px solid #cde0f5;
+  border-radius: 12px;
+  color: #1a4f8a;
+  font-size: 14px;
 }
 
 /* ===== MOBILE ===== */
@@ -176,14 +194,6 @@ button:hover {
     padding: 20px;
   }
 
-  .grid {
-    grid-template-columns: 1fr;
-  }
-
-  .button-row {
-    flex-direction: column;
-  }
-
   button {
     width: 100%;
   }
@@ -195,31 +205,32 @@ button:hover {
 
 <div class="topbar">
   <div class="brand">
-    <!-- 修改为 logo.jpg -->
-    <img src="logo.jpg" alt="Logo">
+    <img src="logo.jpg" alt="Logo" onerror="this.style.display='none'">
     <div class="brand-text">
       Freight Quote Tool
     </div>
   </div>
 </div>
 
-<!-- VALIDITY 筛选 -->
+<!-- 数据加载状态 -->
+<div id="status" class="loading">⏳ 正在加载数据...</div>
+
 <label>VALIDITY</label>
-<select id="validity"></select>
+<select id="validity" disabled></select>
 
 <label>RATE TYPE</label>
-<select id="rateType"></select>
+<select id="rateType" disabled></select>
 
 <label>POL</label>
-<select id="pol"></select>
+<select id="pol" disabled></select>
 
 <label>POD</label>
-<select id="pod"></select>
+<select id="pod" disabled></select>
 
 <label>CONTAINER TYPE</label>
-<select id="containerType"></select>
+<select id="containerType" disabled></select>
 
-<button onclick="calculateQuote()">🔍 查询</button>
+<button id="queryBtn" onclick="calculateQuote()" disabled>🔍 查询</button>
 
 <div id="output"></div>
 
@@ -227,6 +238,7 @@ button:hover {
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_rkgXWvqJu9uRWkyHXLMoGXe1Y1A2pbNvpZ52xU9xr0UE7GsDNSvKXvck8Zk-CRvt7Ys1nClO96tI/pub?output=csv";
 
 let allRows = [];
+let dataLoaded = false;
 
 function parseCSV(text) {
   const rows = [];
@@ -264,6 +276,10 @@ function parseCSV(text) {
     rows.push(row);
   }
 
+  if (rows.length === 0) {
+    return [];
+  }
+
   const headers = rows[0].map(h => h.trim());
 
   return rows.slice(1).map(r => {
@@ -280,19 +296,23 @@ function unique(arr) {
 function fillSelect(id, values) {
   const select = document.getElementById(id);
   select.innerHTML = `<option value="">请选择</option>`;
-  values.forEach(v => {
-    const opt = document.createElement("option");
-    opt.value = v;
-    opt.textContent = v;
-    select.appendChild(opt);
-  });
+  if (values && values.length > 0) {
+    values.forEach(v => {
+      const opt = document.createElement("option");
+      opt.value = v;
+      opt.textContent = v;
+      select.appendChild(opt);
+    });
+    select.disabled = false;
+  } else {
+    select.disabled = true;
+  }
 }
 
 function money(v) {
   return Number(String(v || "").replace(/[^0-9.-]/g, "")) || 0;
 }
 
-// 获取当前所有筛选条件
 function getFilters() {
   return {
     validity: document.getElementById("validity").value,
@@ -303,44 +323,31 @@ function getFilters() {
   };
 }
 
-// 根据当前筛选条件过滤数据
-function filterRows() {
-  const f = getFilters();
-  return allRows.filter(r =>
-    (!f.validity || r["VALIDITY"] === f.validity) &&
-    (!f.rateType || r["FAK/NAC"] === f.rateType) &&
-    (!f.pol || r["POL"] === f.pol) &&
-    (!f.pod || r["POD"] === f.pod) &&
-    (!f.containerType || r["CONTAINER TYPE"] === f.containerType)
-  );
-}
-
-// 联动刷新所有下拉框
 function refreshAllSelects() {
+  if (!dataLoaded || allRows.length === 0) {
+    return;
+  }
+
   const f = getFilters();
 
-  // 1. 更新 VALIDITY（基于全部数据）
   const validityValues = unique(allRows.map(r => r["VALIDITY"]));
   fillSelect("validity", validityValues);
 
-  // 2. 根据当前 VALIDITY 过滤后更新 RATE TYPE
   const afterValidity = allRows.filter(r => !f.validity || r["VALIDITY"] === f.validity);
   fillSelect("rateType", unique(afterValidity.map(r => r["FAK/NAC"])));
 
-  // 3. 根据当前 VALIDITY + RATE TYPE 更新 POL
   const afterRate = afterValidity.filter(r => !f.rateType || r["FAK/NAC"] === f.rateType);
   fillSelect("pol", unique(afterRate.map(r => r["POL"])));
 
-  // 4. 根据当前 VALIDITY + RATE TYPE + POL 更新 POD
   const afterPol = afterRate.filter(r => !f.pol || r["POL"] === f.pol);
   fillSelect("pod", unique(afterPol.map(r => r["POD"])));
 
-  // 5. 根据当前 VALIDITY + RATE TYPE + POL + POD 更新 CONTAINER TYPE
   const afterPod = afterPol.filter(r => !f.pod || r["POD"] === f.pod);
   fillSelect("containerType", unique(afterPod.map(r => r["CONTAINER TYPE"])));
+
+  document.getElementById("queryBtn").disabled = false;
 }
 
-// 下拉改变时触发联动刷新
 function setupEventListeners() {
   const ids = ["validity", "rateType", "pol", "pod", "containerType"];
   ids.forEach(id => {
@@ -351,24 +358,78 @@ function setupEventListeners() {
 }
 
 async function loadData() {
-  const res = await fetch(CSV_URL + "&t=" + Date.now());
-  const text = await res.text();
-  allRows = parseCSV(text);
-
-  // 初始化下拉框
-  refreshAllSelects();
-  setupEventListeners();
+  const status = document.getElementById("status");
+  
+  try {
+    const res = await fetch(CSV_URL + "&t=" + Date.now());
+    
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
+    
+    const text = await res.text();
+    
+    if (!text || text.trim() === "") {
+      throw new Error("CSV 文件为空");
+    }
+    
+    allRows = parseCSV(text);
+    
+    if (allRows.length === 0) {
+      throw new Error("没有解析到数据，请检查 CSV 格式");
+    }
+    
+    dataLoaded = true;
+    
+    const sample = allRows.slice(0, 2);
+    const headers = Object.keys(sample[0] || {});
+    
+    status.innerHTML = `
+      ✅ 数据加载成功！共 ${allRows.length} 行数据<br>
+      列名: ${headers.join(", ")}<br>
+      示例数据: ${JSON.stringify(sample[0], null, 2)}
+    `;
+    status.className = "success";
+    
+    refreshAllSelects();
+    setupEventListeners();
+    
+  } catch (error) {
+    status.innerHTML = `
+      ❌ 数据加载失败: ${error.message}<br>
+      请检查:<br>
+      1. 网络连接是否正常<br>
+      2. Google Sheets 是否公开访问<br>
+      3. CSV 链接是否正确
+    `;
+    status.className = "error";
+    console.error("加载错误:", error);
+  }
 }
 
 function calculateQuote() {
+  if (!dataLoaded) {
+    alert("数据还未加载完成，请稍后");
+    return;
+  }
+
   const f = getFilters();
+  
+  if (!f.validity || !f.rateType || !f.pol || !f.pod || !f.containerType) {
+    document.getElementById("output").innerHTML = `
+      <div class="error">
+        ⚠️ 请选择所有筛选条件
+      </div>
+    `;
+    return;
+  }
 
   const matched = allRows.find(r =>
-    (!f.validity || r["VALIDITY"] === f.validity) &&
-    (!f.rateType || r["FAK/NAC"] === f.rateType) &&
-    (!f.pol || r["POL"] === f.pol) &&
-    (!f.pod || r["POD"] === f.pod) &&
-    (!f.containerType || r["CONTAINER TYPE"] === f.containerType)
+    r["VALIDITY"] === f.validity &&
+    r["FAK/NAC"] === f.rateType &&
+    r["POL"] === f.pol &&
+    r["POD"] === f.pod &&
+    r["CONTAINER TYPE"] === f.containerType
   );
 
   const output = document.getElementById("output");
@@ -376,12 +437,7 @@ function calculateQuote() {
   if (!matched) {
     output.innerHTML = `
       <div class="error">
-        ❌ 未找到匹配数据<br>
-        VALIDITY: ${f.validity || "未选择"}<br>
-        RATE TYPE: ${f.rateType || "未选择"}<br>
-        POL: ${f.pol || "未选择"}<br>
-        POD: ${f.pod || "未选择"}<br>
-        柜型: ${f.containerType || "未选择"}
+        ❌ 未找到匹配数据
       </div>
     `;
     return;
@@ -392,8 +448,8 @@ function calculateQuote() {
       <h2>✅ 报价结果</h2>
       <p>VALIDITY: ${matched["VALIDITY"] || "-"}</p>
       <p>RATE TYPE: ${matched["FAK/NAC"]}</p>
-      <p>CARRIER: ${matched["CARRIER"]}</p>
-      <p>LINE: ${matched["Line"]}</p>
+      <p>CARRIER: ${matched["CARRIER"] || "-"}</p>
+      <p>LINE: ${matched["Line"] || "-"}</p>
       <p>POL: ${matched["POL"]}</p>
       <p>POD: ${matched["POD"]}</p>
       <p>CONTAINER TYPE: ${matched["CONTAINER TYPE"]}</p>
