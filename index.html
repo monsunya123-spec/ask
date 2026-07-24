@@ -409,14 +409,8 @@ async function loadData() {
     
     dataLoaded = true;
     
-    const sample = allRows.slice(0, 2);
-    const headers = Object.keys(sample[0] || {});
-    
-    status.innerHTML = `
-      ✅ 数据加载成功！共 ${allRows.length} 行数据<br>
-      列名: ${headers.join(", ")}<br>
-      示例数据: ${JSON.stringify(sample[0], null, 2)}
-    `;
+    // 只显示简单成功信息，不显示详细数据
+    status.innerHTML = `✅ 数据加载成功！共 ${allRows.length} 行数据`;
     status.className = "success";
     
     refreshAllSelects();
