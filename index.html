@@ -293,20 +293,24 @@ function unique(arr) {
   return [...new Set(arr.filter(Boolean))];
 }
 
-function fillSelect(id, values) {
+function fillSelect(id, values, selectedValue = "") {
   const select = document.getElementById(id);
+
   select.innerHTML = `<option value="">请选择</option>`;
-  if (values && values.length > 0) {
-    values.forEach(v => {
-      const opt = document.createElement("option");
-      opt.value = v;
-      opt.textContent = v;
-      select.appendChild(opt);
-    });
-    select.disabled = false;
-  } else {
-    select.disabled = true;
-  }
+
+  values.forEach(v => {
+    const opt = document.createElement("option");
+    opt.value = v;
+    opt.textContent = v;
+    select.appendChild(opt);
+  });
+
+  // 如果原选择仍然存在，就恢复显示
+  select.value = values.includes(selectedValue)
+    ? selectedValue
+    : "";
+
+  select.disabled = values.length === 0;
 }
 
 function money(v) {
@@ -324,26 +328,50 @@ function getFilters() {
 }
 
 function refreshAllSelects() {
-  if (!dataLoaded || allRows.length === 0) {
-    return;
-  }
+  if (!dataLoaded || allRows.length === 0) return;
 
   const f = getFilters();
 
-  const validityValues = unique(allRows.map(r => r["VALIDITY"]));
-  fillSelect("validity", validityValues);
+  const validityValues = unique(
+    allRows.map(r => r["VALIDITY"])
+  );
+  fillSelect("validity", validityValues, f.validity);
 
-  const afterValidity = allRows.filter(r => !f.validity || r["VALIDITY"] === f.validity);
-  fillSelect("rateType", unique(afterValidity.map(r => r["FAK/NAC"])));
+  const afterValidity = allRows.filter(r =>
+    !f.validity || r["VALIDITY"] === f.validity
+  );
+  const rateTypeValues = unique(
+    afterValidity.map(r => r["FAK/NAC"])
+  );
+  fillSelect("rateType", rateTypeValues, f.rateType);
 
-  const afterRate = afterValidity.filter(r => !f.rateType || r["FAK/NAC"] === f.rateType);
-  fillSelect("pol", unique(afterRate.map(r => r["POL"])));
+  const afterRate = afterValidity.filter(r =>
+    !f.rateType || r["FAK/NAC"] === f.rateType
+  );
+  const polValues = unique(
+    afterRate.map(r => r["POL"])
+  );
+  fillSelect("pol", polValues, f.pol);
 
-  const afterPol = afterRate.filter(r => !f.pol || r["POL"] === f.pol);
-  fillSelect("pod", unique(afterPol.map(r => r["POD"])));
+  const afterPol = afterRate.filter(r =>
+    !f.pol || r["POL"] === f.pol
+  );
+  const podValues = unique(
+    afterPol.map(r => r["POD"])
+  );
+  fillSelect("pod", podValues, f.pod);
 
-  const afterPod = afterPol.filter(r => !f.pod || r["POD"] === f.pod);
-  fillSelect("containerType", unique(afterPod.map(r => r["CONTAINER TYPE"])));
+  const afterPod = afterPol.filter(r =>
+    !f.pod || r["POD"] === f.pod
+  );
+  const containerValues = unique(
+    afterPod.map(r => r["CONTAINER TYPE"])
+  );
+  fillSelect(
+    "containerType",
+    containerValues,
+    f.containerType
+  );
 
   document.getElementById("queryBtn").disabled = false;
 }
