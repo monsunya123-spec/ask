@@ -70,7 +70,7 @@ select {
   height: 44px;
   padding: 0 14px;
   font-size: 14px;
-  color: #111827;  /* 深色文字 */
+  color: #111827;
   background: #ffffff;
   border: 1px solid #d8e0ea;
   border-radius: 10px;
@@ -84,7 +84,7 @@ select:focus {
 }
 
 select option {
-  color: #111827;  /* 选项文字深色 */
+  color: #111827;
 }
 
 select:disabled {
@@ -95,10 +95,16 @@ select:disabled {
 
 /* ===== BUTTON ===== */
 
+.button-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
 button {
+  flex: 1;
   height: 44px;
   padding: 0 24px;
-  margin-top: 24px;
   font-size: 14px;
   font-weight: 700;
   border: none;
@@ -147,7 +153,7 @@ button:disabled {
   background: #f7fbff;
   border: 1px solid #dceafe;
   border-radius: 14px;
-  color: #111827;  /* 整体文字深色 */
+  color: #111827;
 }
 
 .result h2 {
@@ -159,7 +165,7 @@ button:disabled {
 .result p {
   margin: 8px 0;
   font-size: 14px;
-  color: #111827;  /* 段落文字深色 */
+  color: #111827;
 }
 
 .result h3 {
@@ -192,6 +198,10 @@ button:disabled {
 
   .container {
     padding: 20px;
+  }
+
+  .button-row {
+    flex-direction: column;
   }
 
   button {
@@ -230,9 +240,11 @@ button:disabled {
 <label>CONTAINER TYPE</label>
 <select id="containerType" disabled></select>
 
-<button id="queryBtn" onclick="calculateQuote()" disabled>🔍 查询</button>
- <button onclick="resetAll()" style="background: #edf3f3; color: #155e63; margin-top: 0;">🔄 Reset</button>
+<div class="button-row">
+  <button id="queryBtn" onclick="calculateQuote()" disabled>🔍 查询</button>
+  <button onclick="resetAll()">🔄 Reset</button>
 </div>
+
 <div id="output"></div>
 
 <script>
@@ -485,10 +497,6 @@ function calculateQuote() {
   `;
 }
 
-loadData();
-</script>
-</body>
-</html>
 function resetAll() {
   // 清空所有下拉框
   const selectIds = ["validity", "rateType", "pol", "pod", "containerType"];
@@ -503,3 +511,8 @@ function resetAll() {
   // 重新刷新下拉框选项
   refreshAllSelects();
 }
+
+loadData();
+</script>
+</body>
+</html>
