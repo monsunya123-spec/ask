@@ -189,25 +189,23 @@ button:hover {
   }
 
 }
-
-
-
-  
 </style>
 </head>
-
 <body>
 
 <div class="topbar">
-
   <div class="brand">
-    <img src="logo.png" alt="Logo">
+    <!-- 修改为 logo.jpg -->
+    <img src="logo.jpg" alt="Logo">
     <div class="brand-text">
       Freight Quote Tool
     </div>
   </div>
-
 </div>
+
+<!-- VALIDITY 筛选 -->
+<label>VALIDITY</label>
+<select id="validity"></select>
 
 <label>RATE TYPE</label>
 <select id="rateType"></select>
@@ -294,64 +292,83 @@ function money(v) {
   return Number(String(v || "").replace(/[^0-9.-]/g, "")) || 0;
 }
 
+// 获取当前所有筛选条件
+function getFilters() {
+  return {
+    validity: document.getElementById("validity").value,
+    rateType: document.getElementById("rateType").value,
+    pol: document.getElementById("pol").value,
+    pod: document.getElementById("pod").value,
+    containerType: document.getElementById("containerType").value,
+  };
+}
+
+// 根据当前筛选条件过滤数据
+function filterRows() {
+  const f = getFilters();
+  return allRows.filter(r =>
+    (!f.validity || r["VALIDITY"] === f.validity) &&
+    (!f.rateType || r["FAK/NAC"] === f.rateType) &&
+    (!f.pol || r["POL"] === f.pol) &&
+    (!f.pod || r["POD"] === f.pod) &&
+    (!f.containerType || r["CONTAINER TYPE"] === f.containerType)
+  );
+}
+
+// 联动刷新所有下拉框
+function refreshAllSelects() {
+  const f = getFilters();
+
+  // 1. 更新 VALIDITY（基于全部数据）
+  const validityValues = unique(allRows.map(r => r["VALIDITY"]));
+  fillSelect("validity", validityValues);
+
+  // 2. 根据当前 VALIDITY 过滤后更新 RATE TYPE
+  const afterValidity = allRows.filter(r => !f.validity || r["VALIDITY"] === f.validity);
+  fillSelect("rateType", unique(afterValidity.map(r => r["FAK/NAC"])));
+
+  // 3. 根据当前 VALIDITY + RATE TYPE 更新 POL
+  const afterRate = afterValidity.filter(r => !f.rateType || r["FAK/NAC"] === f.rateType);
+  fillSelect("pol", unique(afterRate.map(r => r["POL"])));
+
+  // 4. 根据当前 VALIDITY + RATE TYPE + POL 更新 POD
+  const afterPol = afterRate.filter(r => !f.pol || r["POL"] === f.pol);
+  fillSelect("pod", unique(afterPol.map(r => r["POD"])));
+
+  // 5. 根据当前 VALIDITY + RATE TYPE + POL + POD 更新 CONTAINER TYPE
+  const afterPod = afterPol.filter(r => !f.pod || r["POD"] === f.pod);
+  fillSelect("containerType", unique(afterPod.map(r => r["CONTAINER TYPE"])));
+}
+
+// 下拉改变时触发联动刷新
+function setupEventListeners() {
+  const ids = ["validity", "rateType", "pol", "pod", "containerType"];
+  ids.forEach(id => {
+    document.getElementById(id).addEventListener("change", () => {
+      refreshAllSelects();
+    });
+  });
+}
+
 async function loadData() {
   const res = await fetch(CSV_URL + "&t=" + Date.now());
   const text = await res.text();
   allRows = parseCSV(text);
 
-  fillSelect("rateType", unique(allRows.map(r => r["FAK/NAC"])));
-  updatePOL();
-}
-
-function updatePOL() {
-  const rateType = document.getElementById("rateType").value;
-
-  const filtered = allRows.filter(r =>
-    !rateType || r["FAK/NAC"] === rateType
-  );
-
-  fillSelect("pol", unique(filtered.map(r => r["POL"])));
-  updatePOD();
-}
-
-function updatePOD() {
-  const rateType = document.getElementById("rateType").value;
-  const pol = document.getElementById("pol").value;
-
-  const filtered = allRows.filter(r =>
-    (!rateType || r["FAK/NAC"] === rateType) &&
-    (!pol || r["POL"] === pol)
-  );
-
-  fillSelect("pod", unique(filtered.map(r => r["POD"])));
-  updateContainerType();
-}
-
-function updateContainerType() {
-  const rateType = document.getElementById("rateType").value;
-  const pol = document.getElementById("pol").value;
-  const pod = document.getElementById("pod").value;
-
-  const filtered = allRows.filter(r =>
-    (!rateType || r["FAK/NAC"] === rateType) &&
-    (!pol || r["POL"] === pol) &&
-    (!pod || r["POD"] === pod)
-  );
-
-  fillSelect("containerType", unique(filtered.map(r => r["CONTAINER TYPE"])));
+  // 初始化下拉框
+  refreshAllSelects();
+  setupEventListeners();
 }
 
 function calculateQuote() {
-  const rateType = document.getElementById("rateType").value;
-  const pol = document.getElementById("pol").value;
-  const pod = document.getElementById("pod").value;
-  const containerType = document.getElementById("containerType").value;
+  const f = getFilters();
 
   const matched = allRows.find(r =>
-    r["FAK/NAC"] === rateType &&
-    r["POL"] === pol &&
-    r["POD"] === pod &&
-    r["CONTAINER TYPE"] === containerType
+    (!f.validity || r["VALIDITY"] === f.validity) &&
+    (!f.rateType || r["FAK/NAC"] === f.rateType) &&
+    (!f.pol || r["POL"] === f.pol) &&
+    (!f.pod || r["POD"] === f.pod) &&
+    (!f.containerType || r["CONTAINER TYPE"] === f.containerType)
   );
 
   const output = document.getElementById("output");
@@ -360,10 +377,11 @@ function calculateQuote() {
     output.innerHTML = `
       <div class="error">
         ❌ 未找到匹配数据<br>
-        RATE TYPE: ${rateType}<br>
-        POL: ${pol}<br>
-        POD: ${pod}<br>
-        柜型: ${containerType}
+        VALIDITY: ${f.validity || "未选择"}<br>
+        RATE TYPE: ${f.rateType || "未选择"}<br>
+        POL: ${f.pol || "未选择"}<br>
+        POD: ${f.pod || "未选择"}<br>
+        柜型: ${f.containerType || "未选择"}
       </div>
     `;
     return;
@@ -372,6 +390,7 @@ function calculateQuote() {
   output.innerHTML = `
     <div class="result">
       <h2>✅ 报价结果</h2>
+      <p>VALIDITY: ${matched["VALIDITY"] || "-"}</p>
       <p>RATE TYPE: ${matched["FAK/NAC"]}</p>
       <p>CARRIER: ${matched["CARRIER"]}</p>
       <p>LINE: ${matched["Line"]}</p>
@@ -387,12 +406,7 @@ function calculateQuote() {
   `;
 }
 
-document.getElementById("rateType").addEventListener("change", updatePOL);
-document.getElementById("pol").addEventListener("change", updatePOD);
-document.getElementById("pod").addEventListener("change", updateContainerType);
-
 loadData();
 </script>
-
 </body>
 </html>
