@@ -231,7 +231,8 @@ button:disabled {
 <select id="containerType" disabled></select>
 
 <button id="queryBtn" onclick="calculateQuote()" disabled>🔍 查询</button>
-
+ <button onclick="resetAll()" style="background: #edf3f3; color: #155e63; margin-top: 0;">🔄 Reset</button>
+</div>
 <div id="output"></div>
 
 <script>
@@ -488,3 +489,17 @@ loadData();
 </script>
 </body>
 </html>
+function resetAll() {
+  // 清空所有下拉框
+  const selectIds = ["validity", "rateType", "pol", "pod", "containerType"];
+  selectIds.forEach(id => {
+    const select = document.getElementById(id);
+    select.value = "";
+  });
+  
+  // 清空结果显示
+  document.getElementById("output").innerHTML = "";
+  
+  // 重新刷新下拉框选项
+  refreshAllSelects();
+}
