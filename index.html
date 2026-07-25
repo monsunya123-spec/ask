@@ -573,16 +573,13 @@ function calculateQuote() {
   const oceanFreight = money(matched["OCEAN FREIGHT"]);
   const faf = money(matched["Low Sulphur Fuel surcharge (FAF)"]);
   const bau = money(matched["BAU"]);
+  const peakSeason = matched["Peak Season"] || matched["PEAK SEASON"] || "-";
   const total = money(matched["Total COST(USD)"]);
 
   wrapper.innerHTML = `
     <div class="result">
       <h2>✅ 报价结果</h2>
       
-      <div class="row">
-        <div class="label">PEAK SEASON</div>
-        <div class="value">${matched["Peak Season"] || matched["PEAK SEASON"] || "-"}</div>
-      </div>
       <div class="row">
         <div class="label">VALIDITY</div>
         <div class="value">${matched["VALIDITY"] || "-"}</div>
@@ -625,6 +622,10 @@ function calculateQuote() {
       <div class="row">
         <div class="label">BAU</div>
         <div class="value">USD ${bau.toFixed(2)}</div>
+      </div>
+      <div class="row">
+        <div class="label">PEAK SEASON</div>
+        <div class="value">${peakSeason}</div>
       </div>
       
       <div class="total-row">
